@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDA — עוזר AI לתכנון חקלאי</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #f78166;
+      --accent4: #d2a8ff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --grad1: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+      --grad2: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+      --grad3: linear-gradient(135deg, #da3633 0%, #f78166 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      background: var(--grad1);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p  { font-size: 0.85rem; color: var(--muted); }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── File loader ── */
+    .loader-card {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      text-align: center;
+      margin-bottom: 32px;
+      transition: border-color .2s;
+    }
+    .loader-card:hover { border-color: var(--accent); }
+    .loader-card h2 { margin-bottom: 8px; font-size: 1.1rem; }
+    .loader-card p  { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .file-btn {
+      background: var(--grad1);
+      border: none; color: #fff;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: 'Heebo', sans-serif;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity .2s, transform .1s;
+    }
+    .file-btn:hover { opacity: .85; transform: translateY(-1px); }
+    #fileInput { display: none; }
+
+    /* ── Content (hidden until CSV loaded) ── */
+    #content { display: none; }
+
+    /* ── Metrics row ── */
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      display: flex; align-items: center; gap: 20px;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .metric-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+    .metric-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    .m1 .metric-icon { background: var(--grad1); }
+    .m2 .metric-icon { background: var(--grad2); }
+    .m3 .metric-icon { background: var(--grad3); }
+    .metric-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .metric-value { font-size: 2rem; font-weight: 900; line-height: 1; }
+    .m1 .metric-value { color: var(--accent); }
+    .m2 .metric-value { color: var(--accent2); }
+    .m3 .metric-value { color: var(--accent3); }
+
+    /* ── Section cards ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 28px;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title span.tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ── Selects ── */
+    .controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-group label { font-size: 0.8rem; color: var(--muted); }
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: 'Heebo', sans-serif;
+      cursor: pointer;
+      min-width: 180px;
+      transition: border-color .2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 12px center;
+      padding-left: 32px;
+    }
+    select:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Chart wrapper ── */
+    .chart-wrap { position: relative; width: 100%; }
+    canvas { max-height: 380px; }
+
+    /* ── Missing table ── */
+    .miss-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .miss-table th { text-align: right; color: var(--muted); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .miss-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .bar-cell { background: var(--surface2); border-radius: 4px; overflow: hidden; height: 8px; }
+    .bar-fill  { height: 100%; border-radius: 4px; background: var(--accent); }
+    .bar-fill.danger { background: var(--accent3); }
+
+    /* ── Loading spinner ── */
+    .spinner { text-align: center; padding: 40px; color: var(--muted); }
+
+    @media (max-width: 700px) {
+      .metrics { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌿</div>
+  <div>
+    <h1>לוח EDA — ניתוח נתונים חקלאיים</h1>
+    <p>Exploratory Data Analysis | AI Planning Assistant · M1</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- File Loader -->
+  <div class="loader-card" id="loaderCard">
+    <h2>📂 טען את קובץ הנתונים</h2>
+    <p>בחר את קובץ <strong>agricultural_permits_dataset.csv</strong> מהתיקייה שלך</p>
+    <button class="file-btn" onclick="document.getElementById('fileInput').click()">בחר קובץ CSV</button>
+    <input type="file" id="fileInput" accept=".csv" onchange="loadCSV(event)" />
+    <p id="loadStatus" style="margin-top:14px;color:var(--accent);font-size:.85rem;"></p>
+  </div>
+
+  <!-- Main content -->
+  <div id="content">
+
+    <!-- 1. Metrics -->
+    <div class="metrics">
+      <div class="metric-card m1">
+        <div class="metric-icon">📋</div>
+        <div>
+          <div class="metric-label">סה"כ שורות</div>
+          <div class="metric-value" id="mRows">—</div>
+        </div>
+      </div>
+      <div class="metric-card m2">
+        <div class="metric-icon">📊</div>
+        <div>
+          <div class="metric-label">סה"כ עמודות</div>
+          <div class="metric-value" id="mCols">—</div>
+        </div>
+      </div>
+      <div class="metric-card m3">
+        <div class="metric-icon">⚠️</div>
+        <div>
+          <div class="metric-label">אחוז ערכים חסרים</div>
+          <div class="metric-value" id="mMissing">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Missing values table -->
+    <div class="section">
+      <div class="section-title">🔍 ערכים חסרים לפי עמודה <span class="tag">Missing Values</span></div>
+      <table class="miss-table">
+        <thead>
+          <tr>
+            <th>עמודה</th>
+            <th>חסרים</th>
+            <th>אחוז</th>
+            <th style="width:200px">התפלגות חסרים</th>
+          </tr>
+        </thead>
+        <tbody id="missTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 3. Histogram -->
+    <div class="section">
+      <div class="section-title">📈 היסטוגרמה <span class="tag">Histogram</span></div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <label>בחר עמודה</label>
+          <select id="histCol" onchange="drawHistogram()"></select>
+        </div>
+        <div class="ctrl-group">
+          <label>מספר סלים (bins)</label>
+          <select id="histBins" onchange="drawHistogram()">
+            <option value="10">10</option>
+            <option value="15" selected>15</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+    </div>
+
+    <!-- 4. Scatter plot -->
+    <div class="section">
+      <div class="section-title">🔵 גרף פיזור <span class="tag">Scatter Plot</span></div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <label>ציר X</label>
+          <select id="scatterX" onchange="drawScatter()"></select>
+        </div>
+        <div class="ctrl-group">
+          <label>ציר Y</label>
+          <select id="scatterY" onchange="drawScatter()"></select>
+        </div>
+        <div class="ctrl-group">
+          <label>צבע לפי</label>
+          <select id="scatterColor" onchange="drawScatter()">
+            <option value="">ללא צבע</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+let rawData = [];
+let columns = [];
+let numericCols = [];
+let categoricalCols = [];
+let histChartObj = null;
+let scatterChartObj = null;
+
+// ── Color palettes ──
+const PALETTE = [
+  '#58a6ff','#3fb950','#f78166','#d2a8ff',
+  '#ffa657','#79c0ff','#56d364','#ff7b72',
+  '#e3b341','#a5d6ff'
+];
+
+function loadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  document.getElementById('loadStatus').textContent = 'טוען... ⏳';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      rawData = results.data;
+      columns = results.meta.fields || [];
+      classifyColumns();
+      renderAll();
+      document.getElementById('loaderCard').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    },
+    error: function() {
+      document.getElementById('loadStatus').textContent = '❌ שגיאה בטעינת הקובץ';
+    }
+  });
+}
+
+function classifyColumns() {
+  numericCols = [];
+  categoricalCols = [];
+  columns.forEach(col => {
+    const vals = rawData.map(r => r[col]).filter(v => v !== '' && v !== null && v !== undefined);
+    const numCount = vals.filter(v => !isNaN(parseFloat(v))).length;
+    if (numCount / vals.length > 0.7) numericCols.push(col);
+    else categoricalCols.push(col);
+  });
+}
+
+function renderAll() {
+  renderMetrics();
+  renderMissingTable();
+  populateSelects();
+  drawHistogram();
+  drawScatter();
+}
+
+// ── 1. Metrics ──
+function renderMetrics() {
+  const rows = rawData.length;
+  const cols = columns.length;
+
+  let totalCells = rows * cols;
+  let missingCells = 0;
+  columns.forEach(col => {
+    rawData.forEach(row => {
+      if (row[col] === '' || row[col] === null || row[col] === undefined) missingCells++;
+    });
+  });
+  const missPct = ((missingCells / totalCells) * 100).toFixed(1);
+
+  document.getElementById('mRows').textContent = rows.toLocaleString();
+  document.getElementById('mCols').textContent = cols;
+  document.getElementById('mMissing').textContent = missPct + '%';
+}
+
+// ── 2. Missing table ──
+function renderMissingTable() {
+  const tbody = document.getElementById('missTableBody');
+  tbody.innerHTML = '';
+  columns.forEach(col => {
+    const missing = rawData.filter(r => r[col] === '' || r[col] === null || r[col] === undefined).length;
+    const pct = ((missing / rawData.length) * 100).toFixed(1);
+    const isDanger = parseFloat(pct) > 50;
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${col}</strong></td>
+        <td>${missing}</td>
+        <td style="color:${isDanger ? 'var(--accent3)' : 'var(--muted)'}">${pct}%</td>
+        <td>
+          <div class="bar-cell">
+            <div class="bar-fill${isDanger ? ' danger' : ''}" style="width:${pct}%"></div>
+          </div>
+        </td>
+      </tr>`;
+  });
+}
+
+// ── Populate selects ──
+function populateSelects() {
+  const histSel   = document.getElementById('histCol');
+  const scatterX  = document.getElementById('scatterX');
+  const scatterY  = document.getElementById('scatterY');
+  const scatterC  = document.getElementById('scatterColor');
+
+  histSel.innerHTML  = '';
+  scatterX.innerHTML = '';
+  scatterY.innerHTML = '';
+  scatterC.innerHTML = '<option value="">ללא צבע</option>';
+
+  numericCols.forEach(col => {
+    histSel.innerHTML  += `<option value="${col}">${col}</option>`;
+    scatterX.innerHTML += `<option value="${col}">${col}</option>`;
+    scatterY.innerHTML += `<option value="${col}">${col}</option>`;
+  });
+
+  // default Y to second numeric column
+  if (scatterY.options.length > 1) scatterY.selectedIndex = 1;
+
+  categoricalCols.forEach(col => {
+    scatterC.innerHTML += `<option value="${col}">${col}</option>`;
+  });
+  // default color = סטטוס_אישור if exists
+  const statusOpt = [...scatterC.options].find(o => o.value === 'סטטוס_אישור');
+  if (statusOpt) scatterC.value = 'סטטוס_אישור';
+}
+
+// ── 3. Histogram ──
+function drawHistogram() {
+  const col  = document.getElementById('histCol').value;
+  const bins = parseInt(document.getElementById('histBins').value);
+  if (!col) return;
+
+  const vals = rawData.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+  const min  = Math.min(...vals);
+  const max  = Math.max(...vals);
+  const step = (max - min) / bins;
+
+  const labels = [];
+  const counts = new Array(bins).fill(0);
+  for (let i = 0; i < bins; i++) {
+    labels.push((min + i * step).toFixed(1));
+  }
+  vals.forEach(v => {
+    let idx = Math.floor((v - min) / step);
+    if (idx >= bins) idx = bins - 1;
+    counts[idx]++;
+  });
+
+  if (histChartObj) histChartObj.destroy();
+  const ctx = document.getElementById('histChart').getContext('2d');
+  histChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: col,
+        data: counts,
+        backgroundColor: 'rgba(88,166,255,0.7)',
+        borderColor: '#58a6ff',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `ערך: ${items[0].label}`,
+            label: (item)  => `תדירות: ${item.raw}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8b949e', maxRotation: 45 },
+          grid:  { color: 'rgba(48,54,61,0.6)' },
+          title: { display: true, text: col, color: '#8b949e' }
+        },
+        y: {
+          ticks: { color: '#8b949e' },
+          grid:  { color: 'rgba(48,54,61,0.6)' },
+          title: { display: true, text: 'תדירות', color: '#8b949e' }
+        }
+      }
+    }
+  });
+}
+
+// ── 4. Scatter Plot ──
+function drawScatter() {
+  const xCol  = document.getElementById('scatterX').value;
+  const yCol  = document.getElementById('scatterY').value;
+  const cCol  = document.getElementById('scatterColor').value;
+
+  if (!xCol || !yCol) return;
+
+  let datasets;
+  if (cCol) {
+    // Group by category
+    const groups = {};
+    rawData.forEach(row => {
+      const gKey = row[cCol] || '(ריק)';
+      if (!groups[gKey]) groups[gKey] = [];
+      const x = parseFloat(row[xCol]);
+      const y = parseFloat(row[yCol]);
+      if (!isNaN(x) && !isNaN(y)) groups[gKey].push({ x, y });
+    });
+    const keys = Object.keys(groups);
+    datasets = keys.map((k, i) => ({
+      label: k,
+      data:  groups[k],
+      backgroundColor: PALETTE[i % PALETTE.length] + 'aa',
+      borderColor:     PALETTE[i % PALETTE.length],
+      borderWidth: 1,
+      pointRadius: 5,
+      pointHoverRadius: 7
+    }));
+  } else {
+    const points = rawData.map(row => ({
+      x: parseFloat(row[xCol]),
+      y: parseFloat(row[yCol])
+    })).filter(p => !isNaN(p.x) && !isNaN(p.y));
+    datasets = [{ label: `${xCol} vs ${yCol}`, data: points,
+      backgroundColor: 'rgba(88,166,255,0.6)', borderColor: '#58a6ff',
+      borderWidth: 1, pointRadius: 4 }];
+  }
+
+  if (scatterChartObj) scatterChartObj.destroy();
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+  scatterChartObj = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: !!cCol,
+          labels: { color: '#e6edf3', font: { family: 'Heebo' }, boxWidth: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (item) => `${item.dataset.label}: (${item.parsed.x.toFixed(1)}, ${item.parsed.y.toFixed(1)})`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8b949e' },
+          grid:  { color: 'rgba(48,54,61,0.6)' },
+          title: { display: true, text: xCol, color: '#8b949e' }
+        },
+        y: {
+          ticks: { color: '#8b949e' },
+          grid:  { color: 'rgba(48,54,61,0.6)' },
+          title: { display: true, text: yCol, color: '#8b949e' }
+        }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
