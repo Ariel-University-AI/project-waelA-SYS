@@ -464,8 +464,8 @@ if df is not None and not df.empty:
                 hoverinfo="skip",
             ))
 
-            fig_sc2.update_layout(**PLOT_LAYOUT, height=460,
-                                  legend=dict(font=dict(size=13), itemsizing="constant"))
+            fig_sc2.update_layout(**PLOT_LAYOUT, height=460)
+            fig_sc2.update_layout(legend_font_size=13, legend_itemsizing="constant")
             fig_sc2.update_xaxes(title_text=sc2_col,   title_font=dict(size=15), tickfont=dict(size=13))
             fig_sc2.update_yaxes(title_text=iv_metric, title_font=dict(size=15), tickfont=dict(size=13))
             st.plotly_chart(fig_sc2, use_container_width=True)
