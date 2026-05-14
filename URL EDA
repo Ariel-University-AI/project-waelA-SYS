@@ -1,1 +1,22 @@
-http://localhost:8501/
+== קישורים לאפליקציית EDA ==
+
+GitHub Repository:
+https://github.com/Ariel-University-AI/project-waelA-SYS
+
+קובץ האפליקציה:
+https://github.com/Ariel-University-AI/project-waelA-SYS/blob/main/eda_streamlit.py
+
+== הרצה מקומית ==
+python -m streamlit run eda_streamlit.py
+כתובת: http://localhost:8501
+
+== פרסום ציבורי חינמי (Streamlit Cloud) ==
+1. היכנס ל: https://share.streamlit.io
+2. התחבר עם חשבון GitHub
+3. לחץ "New app"
+4. בחר: Ariel-University-AI / project-waelA-SYS
+5. Main file: eda_streamlit.py
+6. לחץ "Deploy"
+
+לאחר הפרסום תקבל קישור ציבורי בצורה:
+https://share.streamlit.io/ariel-university-ai/project-waela-sys/main/eda_streamlit.py
