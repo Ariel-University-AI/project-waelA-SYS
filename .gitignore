@@ -22,8 +22,6 @@ agricultural_permits_dataset.csv
 # Claude Code internals
 .claude/
 
-# Trained model (large binary)
-model.pkl
 
 # OS
 .DS_Store
