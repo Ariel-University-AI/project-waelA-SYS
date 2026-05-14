@@ -4,6 +4,7 @@ EDA — ניתוח נתונים חקלאיים
 """
 
 import os
+import numpy as np
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -328,67 +329,146 @@ if df is not None and not df.empty:
         fig.update_layout(
             **PLOT_LAYOUT,
             height=460,
-            xaxis_title=dict(text=hist_col, font=dict(size=15)),
-            yaxis_title=dict(text="מספר רשומות", font=dict(size=15)),
-            xaxis=dict(**PLOT_LAYOUT["xaxis"], tickfont=dict(size=13, color="#8b949e")),
-            yaxis=dict(**PLOT_LAYOUT["yaxis"], tickfont=dict(size=13, color="#8b949e")),
             showlegend=False,
             bargap=0.06,
         )
+        fig.update_xaxes(title_text=hist_col, title_font=dict(size=15), tickfont=dict(size=13))
+        fig.update_yaxes(title_text="מספר רשומות", title_font=dict(size=15), tickfont=dict(size=13))
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── 8. גרף פיזור ─────────────────────────────────────────────────────────
+    # ── 8. ניתוח השוואתי ─────────────────────────────────────────────────────
     st.markdown('<div class="section">', unsafe_allow_html=True)
-    st.markdown('<div class="sec-title">🔵 גרף פיזור <span class="tag">Scatter Plot</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-title">📊 ניתוח השוואתי <span class="tag">Investor View</span></div>', unsafe_allow_html=True)
 
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        sc_x = st.selectbox("ציר X", num_cols, key="sc_x")
-    with s2:
-        sc_y = st.selectbox("ציר Y", num_cols, index=min(1, len(num_cols) - 1), key="sc_y")
-    with s3:
-        color_opts = ["ללא צבע"] + cat_cols
-        default_c  = color_opts.index("סטטוס_אישור") if "סטטוס_אישור" in color_opts else 0
-        sc_color   = st.selectbox("צבע לפי", color_opts, index=default_c, key="sc_color")
+    iv1, iv2 = st.columns(2)
+    with iv1:
+        iv_metric = st.selectbox("משתנה לניתוח", num_cols, key="iv_metric")
+    with iv2:
+        iv_group = st.selectbox("קבץ לפי", cat_cols, key="iv_group",
+                                index=cat_cols.index("סטטוס_אישור") if "סטטוס_אישור" in cat_cols else 0)
 
-    if sc_x and sc_y:
-        color_col = sc_color if sc_color != "ללא צבע" else None
-        fig_sc = go.Figure()
+    tab_bar, tab_box, tab_scatter = st.tabs(["📊  ממוצע לפי קטגוריה", "📦  התפלגות (Box Plot)", "🔵  פיזור עם מגמה"])
 
-        if color_col:
-            sdf = df[[sc_x, sc_y, color_col]].copy()
-            sdf[color_col] = sdf[color_col].fillna("(ריק)")
-            sdf[sc_x] = pd.to_numeric(sdf[sc_x], errors="coerce")
-            sdf[sc_y] = pd.to_numeric(sdf[sc_y], errors="coerce")
-            sdf = sdf.dropna(subset=[sc_x, sc_y])
+    if iv_metric and iv_group:
+        idf = df[[iv_metric, iv_group]].copy()
+        idf[iv_metric] = pd.to_numeric(idf[iv_metric], errors="coerce")
+        idf[iv_group]  = idf[iv_group].fillna("(ריק)")
+        idf = idf.dropna(subset=[iv_metric])
 
-            for i, cat in enumerate(sdf[color_col].unique()):
-                sub = sdf[sdf[color_col] == cat]
+        categories = sorted(idf[iv_group].unique())
+
+        # ── Tab 1: Bar — ממוצע לפי קטגוריה ──────────────────────────────────
+        with tab_bar:
+            agg = (idf.groupby(iv_group)[iv_metric]
+                   .agg(["mean", "count"])
+                   .rename(columns={"mean": "ממוצע", "count": "רשומות"})
+                   .loc[categories])
+
+            fig_bar = go.Figure()
+            for i, cat in enumerate(agg.index):
                 clr = PALETTE[i % len(PALETTE)]
-                fig_sc.add_trace(go.Scatter(
-                    x=sub[sc_x], y=sub[sc_y],
-                    mode="markers", name=str(cat),
-                    marker=dict(color=clr, opacity=0.67,
-                                line=dict(color=clr, width=1), size=7),
-                    hovertemplate=f"{cat}<br>{sc_x}: %{{x:.1f}}<br>{sc_y}: %{{y:.1f}}<extra></extra>",
+                fig_bar.add_trace(go.Bar(
+                    x=[cat], y=[agg.loc[cat, "ממוצע"]],
+                    name=str(cat),
+                    marker=dict(color=clr, opacity=0.85, line=dict(color=clr, width=1.5)),
+                    text=[f"{agg.loc[cat, 'ממוצע']:,.1f}"],
+                    textposition="outside",
+                    textfont=dict(size=14, color="#e6edf3"),
+                    hovertemplate=f"<b>{cat}</b><br>ממוצע: %{{y:,.1f}}<br>רשומות: {agg.loc[cat, 'רשומות']:,}<extra></extra>",
                 ))
-        else:
-            sdf = df[[sc_x, sc_y]].copy()
-            sdf[sc_x] = pd.to_numeric(sdf[sc_x], errors="coerce")
-            sdf[sc_y] = pd.to_numeric(sdf[sc_y], errors="coerce")
-            sdf = sdf.dropna()
-            fig_sc.add_trace(go.Scatter(
-                x=sdf[sc_x], y=sdf[sc_y],
-                mode="markers", name=f"{sc_x} vs {sc_y}",
-                marker=dict(color="#58a6ff", opacity=0.6,
-                            line=dict(color="#58a6ff", width=1), size=6),
-                hovertemplate=f"{sc_x}: %{{x:.1f}}<br>{sc_y}: %{{y:.1f}}<extra></extra>",
+            fig_bar.update_layout(
+                **PLOT_LAYOUT, height=460,
+                showlegend=False, bargap=0.35,
+                uniformtext_minsize=12, uniformtext_mode="hide",
+            )
+            fig_bar.update_xaxes(title_text=iv_group, title_font=dict(size=15), tickfont=dict(size=14))
+            fig_bar.update_yaxes(title_text=f"ממוצע {iv_metric}", title_font=dict(size=15), tickfont=dict(size=13))
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        # ── Tab 2: Box Plot ───────────────────────────────────────────────────
+        with tab_box:
+            fig_box = go.Figure()
+            for i, cat in enumerate(categories):
+                vals_cat = idf[idf[iv_group] == cat][iv_metric]
+                clr = PALETTE[i % len(PALETTE)]
+                fig_box.add_trace(go.Box(
+                    y=vals_cat, name=str(cat),
+                    marker=dict(color=clr, size=5),
+                    line=dict(color=clr, width=2),
+                    fillcolor=clr.replace("#", "rgba(") + ",0.15)" if False else clr,
+                    opacity=0.8,
+                    boxmean="sd",
+                    hovertemplate=f"<b>{cat}</b><br>%{{y:.1f}}<extra></extra>",
+                ))
+            fig_box.update_layout(
+                **PLOT_LAYOUT, height=460,
+                showlegend=False, boxgap=0.3,
+            )
+            fig_box.update_xaxes(title_text=iv_group, title_font=dict(size=15), tickfont=dict(size=14))
+            fig_box.update_yaxes(title_text=iv_metric, title_font=dict(size=15), tickfont=dict(size=13))
+            st.plotly_chart(fig_box, use_container_width=True)
+
+        # ── Tab 3: Scatter עם קו מגמה ─────────────────────────────────────────
+        with tab_scatter:
+            sc2_col = st.selectbox("ציר X לפיזור", [c for c in num_cols if c != iv_metric],
+                                   key="sc2_col")
+            sdf2 = df[[sc2_col, iv_metric, iv_group]].copy()
+            sdf2[sc2_col]  = pd.to_numeric(sdf2[sc2_col],  errors="coerce")
+            sdf2[iv_metric] = pd.to_numeric(sdf2[iv_metric], errors="coerce")
+            sdf2[iv_group]  = sdf2[iv_group].fillna("(ריק)")
+            sdf2 = sdf2.dropna(subset=[sc2_col, iv_metric])
+
+            corr = sdf2[sc2_col].corr(sdf2[iv_metric])
+            corr_label = "חיובי חזק" if corr > 0.6 else "שלילי חזק" if corr < -0.6 else \
+                         "חיובי בינוני" if corr > 0.3 else "שלילי בינוני" if corr < -0.3 else "חלש"
+            corr_color = "#3fb950" if corr > 0.3 else "#f78166" if corr < -0.3 else "#8b949e"
+
+            st.markdown(f"""
+            <div style="display:flex;gap:14px;margin:14px 0 20px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:140px;background:#21262d;border:1px solid #30363d;
+                          border-radius:12px;padding:14px 18px;text-align:center;">
+                <div style="font-size:0.8rem;color:#8b949e;margin-bottom:5px;">מקדם מתאם (r)</div>
+                <div style="font-size:1.6rem;font-weight:900;color:{corr_color};">{corr:.2f}</div>
+                <div style="font-size:0.76rem;color:{corr_color};margin-top:3px;">{corr_label}</div>
+              </div>
+              <div style="flex:1;min-width:140px;background:#21262d;border:1px solid #30363d;
+                          border-radius:12px;padding:14px 18px;text-align:center;">
+                <div style="font-size:0.8rem;color:#8b949e;margin-bottom:5px;">נקודות נתונים</div>
+                <div style="font-size:1.6rem;font-weight:900;color:#58a6ff;">{len(sdf2):,}</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            fig_sc2 = go.Figure()
+            for i, cat in enumerate(sdf2[iv_group].unique()):
+                sub = sdf2[sdf2[iv_group] == cat]
+                clr = PALETTE[i % len(PALETTE)]
+                fig_sc2.add_trace(go.Scatter(
+                    x=sub[sc2_col], y=sub[iv_metric],
+                    mode="markers", name=str(cat),
+                    marker=dict(color=clr, opacity=0.5, size=8,
+                                line=dict(color=clr, width=0.5)),
+                    hovertemplate=f"<b>{cat}</b><br>{sc2_col}: %{{x:.1f}}<br>{iv_metric}: %{{y:.1f}}<extra></extra>",
+                ))
+
+            xv = sdf2[sc2_col].values
+            yv = sdf2[iv_metric].values
+            m, b = np.polyfit(xv, yv, 1)
+            fig_sc2.add_trace(go.Scatter(
+                x=[float(xv.min()), float(xv.max())],
+                y=[m * float(xv.min()) + b, m * float(xv.max()) + b],
+                mode="lines", name="קו מגמה",
+                line=dict(color="#f78166", width=2.5, dash="dash"),
+                hoverinfo="skip",
             ))
 
-        fig_sc.update_layout(**PLOT_LAYOUT, xaxis_title=sc_x, yaxis_title=sc_y)
-        st.plotly_chart(fig_sc, use_container_width=True)
+            fig_sc2.update_layout(**PLOT_LAYOUT, height=460)
+            fig_sc2.update_layout(legend=dict(font=dict(size=13), itemsizing="constant"))
+            fig_sc2.update_xaxes(title_text=sc2_col,   title_font=dict(size=15), tickfont=dict(size=13))
+            fig_sc2.update_yaxes(title_text=iv_metric, title_font=dict(size=15), tickfont=dict(size=13))
+            st.plotly_chart(fig_sc2, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
