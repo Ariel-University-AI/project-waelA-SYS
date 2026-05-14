@@ -16,6 +16,9 @@ venv/
 # Backup files
 *_backup.csv
 
+# Original dataset (replaced by _fixed version)
+agricultural_permits_dataset.csv
+
 # Claude Code internals
 .claude/
 
