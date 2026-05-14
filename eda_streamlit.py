@@ -489,6 +489,45 @@ else:
     st.info("⬆️ העלה קובץ CSV כדי להתחיל את הניתוח, או לחץ על **טען קובץ ברירת מחדל**.")
 
 
+# ── מיפוי מחוז → אזור (לפי משרד החקלאות) ────────────────────────────────────
+DISTRICT_REGIONS = {
+    "מחוז צפון":  ["גליל", "גולן", "עמקים", "בקעת הירדן"],
+    "מחוז חיפה":  ["חוף הכרמל"],
+    "מחוז מרכז":  ["שרון", "שפלה"],
+    "מחוז דרום":  ["נגב", "ערבה"],
+}
+
+BUILDING_TYPES = [
+    "חממה", "רפת", "לול", "אורווה", "כבשייה", "יקב", "בית בד",
+    "סככת ציוד", "בית אריזה", "בית אריזה פרחים", "בית אריזה תות שדה",
+    "חממת קנאביס רפואי", "מחסן חקלאי", "מחסן קירור", "מכון רדייה",
+]
+
+
+def get_reasons(prediction, גובה, מרחק_כביש, מרחק_מגורים, סוג, מכתב, עמידה, ייעוד, שטח):
+    """חוקי ההחלטה לפי נתוני משרד החקלאות."""
+    reasons = []
+    if prediction == "נדחה":
+        if עמידה == "לא":
+            reasons.append("אי-עמידה בתמ\"א 35")
+        if ייעוד == "לא":
+            reasons.append("ייעוד הקרקע אינו חקלאי")
+        if סוג == "לול" and מרחק_מגורים < 100:
+            reasons.append("לול — מרחק ממגורים פחות מ-100 מ'")
+        if סוג == "חממת קנאביס רפואי" and שטח > 2000:
+            reasons.append("חממת קנאביס מעל 2,000 מ\"ר")
+    elif prediction == "דרוש תיקון":
+        if גובה > 10:
+            reasons.append("גובה המבנה מעל 10 מ'")
+        if מכתב == "לא":
+            reasons.append("חסר מכתב המלצה לבנייה גדולה")
+        if מרחק_כביש < 50:
+            reasons.append("מרחק מכביש נמוך מדי")
+        if סוג == "לול" and 100 <= מרחק_מגורים < 300:
+            reasons.append("לול — מרחק ממגורים בין 100–300 מ'")
+    return reasons
+
+
 # ── 10. ניבוי בקשה חדשה ──────────────────────────────────────────────────────
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.markdown('<div class="sec-title">🤖 ניבוי סטטוס בקשה חדשה <span class="tag">Predict</span></div>', unsafe_allow_html=True)
@@ -500,23 +539,23 @@ if model is None:
 else:
     p1, p2, p3 = st.columns(3)
     with p1:
-        מחוז       = st.selectbox("מחוז", ["מחוז צפון","מחוז חיפה","מחוז מרכז","מחוז דרום"], key="p_מחוז")
-        אזור       = st.selectbox("אזור", ["גליל","גולן","עמקים","בקעת הירדן","חוף הכרמל","שרון","שפלה","נגב","ערבה"], key="p_אזור")
-        סוג_מבנה   = st.selectbox("סוג מבנה", ["חממה","רפת","לול","אורווה","כבשייה","יקב","בית בד","סככת ציוד","בית אריזה","בית אריזה פרחים","בית אריזה תות שדה","חממת קנאביס רפואי","מחסן חקלאי","מחסן קירור","מכון רדייה"], key="p_סוג")
-        ייעוד_חקלאי = st.selectbox("ייעוד חקלאי", ["כן","לא"], key="p_ייעוד")
+        מחוז       = st.selectbox("מחוז", list(DISTRICT_REGIONS.keys()), key="p_מחוז")
+        אזור       = st.selectbox("אזור", DISTRICT_REGIONS[מחוז], key="p_אזור")
+        סוג_מבנה   = st.selectbox("סוג מבנה", BUILDING_TYPES, key="p_סוג")
+        ייעוד_חקלאי = st.selectbox("ייעוד חקלאי", ["כן", "לא"], key="p_ייעוד")
 
     with p2:
-        שטח_מבוקש   = st.number_input("שטח מבוקש (מ״ר)", min_value=10,  max_value=5000, value=200,  step=10,  key="p_שטח")
-        שטח_חקלאי   = st.number_input("שטח חקלאי (דונם)", min_value=1,   max_value=500,  value=20,   step=1,   key="p_חקלאי")
-        מספר_בעחיים = st.number_input("מספר בעלי חיים",   min_value=0,   max_value=1000, value=0,    step=10,  key="p_בעח")
-        גובה_מבנה   = st.number_input("גובה מבנה (מ׳)",   min_value=1.0, max_value=20.0, value=4.0,  step=0.5, key="p_גובה")
+        שטח_מבוקש   = st.number_input("שטח מבוקש (מ״ר)",    min_value=10,  max_value=5000, value=200,  step=10,  key="p_שטח")
+        שטח_חקלאי   = st.number_input("שטח חקלאי (דונם)",   min_value=1,   max_value=500,  value=20,   step=1,   key="p_חקלאי")
+        מספר_בעחיים = st.number_input("מספר בעלי חיים",      min_value=0,   max_value=1000, value=0,    step=10,  key="p_בעח")
+        גובה_מבנה   = st.number_input("גובה מבנה (מ׳)",      min_value=1.0, max_value=20.0, value=4.0,  step=0.5, key="p_גובה")
 
     with p3:
-        מרחק_כביש   = st.number_input("מרחק מכביש (מ׳)",  min_value=0,   max_value=5000, value=500,  step=50,  key="p_כביש")
-        מרחק_מגורים = st.number_input("מרחק ממגורים (מ׳)", min_value=0,  max_value=5000, value=200,  step=50,  key="p_מגורים")
-        פנלים        = st.selectbox("פנלים סולאריים", ["כן","לא"], key="p_פנלים")
-        עמידה_בתמא  = st.selectbox("עמידה בתמ״א", ["כן","לא"], key="p_תמא")
-        מכתב_המלצה  = st.selectbox("מכתב המלצה", ["כן","לא"], key="p_מכתב")
+        מרחק_כביש   = st.number_input("מרחק מכביש (מ׳)",     min_value=0,   max_value=5000, value=500,  step=50,  key="p_כביש")
+        מרחק_מגורים = st.number_input("מרחק ממגורים (מ׳)",   min_value=0,   max_value=5000, value=200,  step=50,  key="p_מגורים")
+        פנלים        = st.selectbox("פנלים סולאריים",         ["כן", "לא"],  key="p_פנלים")
+        עמידה_בתמא  = st.selectbox("עמידה בתמ״א",            ["כן", "לא"],  key="p_תמא")
+        מכתב_המלצה  = st.selectbox("מכתב המלצה",             ["כן", "לא"],  key="p_מכתב")
 
     if st.button("🔍 נבא סטטוס", use_container_width=True, type="primary"):
         input_df = pd.DataFrame([{
@@ -526,8 +565,8 @@ else:
             "שטח_מבוקש_מ2":      שטח_מבוקש,
             "שטח_חקלאי_דונם":    שטח_חקלאי,
             "מספר_בעלי_חיים":    מספר_בעחיים,
-            "מרחק_מכביש_מטר":   מרחק_כביש,
-            "מרחק_ממגורים_מטר": מרחק_מגורים,
+            "מרחק_מכביש_מטר":   float(מרחק_כביש),
+            "מרחק_ממגורים_מטר": float(מרחק_מגורים),
             "גובה_מבנה_מטר":    גובה_מבנה,
             "פנלים_סולאריים":    פנלים,
             "ייעוד_חקלאי":       ייעוד_חקלאי,
@@ -538,9 +577,20 @@ else:
         prediction = model.predict(input_df)[0]
         proba      = model.predict_proba(input_df)[0]
         confidence = round(max(proba) * 100, 1)
+        reasons    = get_reasons(prediction, גובה_מבנה, מרחק_כביש, מרחק_מגורים,
+                                  סוג_מבנה, מכתב_המלצה, עמידה_בתמא, ייעוד_חקלאי, שטח_מבוקש)
 
         color = {"מאושר": "#3fb950", "נדחה": "#f78166", "דרוש תיקון": "#ffa657"}.get(prediction, "#58a6ff")
         icon  = {"מאושר": "✅", "נדחה": "❌", "דרוש תיקון": "⚠️"}.get(prediction, "🔵")
+
+        reasons_html = ""
+        if reasons:
+            items = "".join(f'<li style="margin:6px 0;font-size:1rem;">{r}</li>' for r in reasons)
+            reasons_html = f"""
+            <div style="margin-top:18px;text-align:right;">
+              <div style="font-size:0.9rem;color:#8b949e;margin-bottom:8px;">סיבות:</div>
+              <ul style="list-style:none;padding:0;margin:0;color:#e6edf3;">{items}</ul>
+            </div>"""
 
         st.markdown(f"""
         <div style="margin-top:24px;background:#21262d;border:2px solid {color};
@@ -548,6 +598,7 @@ else:
           <div style="font-size:2.8rem;margin-bottom:8px;">{icon}</div>
           <div style="font-size:2rem;font-weight:900;color:{color};margin-bottom:8px;">{prediction}</div>
           <div style="font-size:1rem;color:#8b949e;">רמת ביטחון: <strong style="color:{color}">{confidence}%</strong></div>
+          {reasons_html}
         </div>
         """, unsafe_allow_html=True)
 
