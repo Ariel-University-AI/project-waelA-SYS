@@ -273,23 +273,68 @@ if df is not None and not df.empty:
 
     # ── 7. היסטוגרמה ─────────────────────────────────────────────────────────
     st.markdown('<div class="section">', unsafe_allow_html=True)
-    st.markdown('<div class="sec-title">📈 היסטוגרמה <span class="tag">Histogram</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-title">📈 התפלגות ערכים <span class="tag">Histogram</span></div>', unsafe_allow_html=True)
 
-    h1, h2 = st.columns([3, 1])
-    with h1:
-        hist_col = st.selectbox("בחר עמודה", num_cols, key="hist_col")
-    with h2:
-        hist_bins = st.selectbox("מספר bins", [10, 15, 20, 30], index=1, key="hist_bins")
+    hc1, hc2 = st.columns([3, 1])
+    with hc1:
+        hist_col = st.selectbox("בחר עמודה לניתוח", num_cols, key="hist_col")
+    with hc2:
+        hist_bins = st.slider("רזולוציה", min_value=5, max_value=30, value=15, step=5, key="hist_bins")
 
     if hist_col:
         vals = pd.to_numeric(df[hist_col], errors="coerce").dropna()
+
+        v_mean   = vals.mean()
+        v_median = vals.median()
+        v_min    = vals.min()
+        v_max    = vals.max()
+
+        st.markdown(f"""
+        <div style="display:flex;gap:16px;margin:18px 0 22px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:130px;background:#21262d;border:1px solid #30363d;
+                      border-radius:12px;padding:16px 20px;text-align:center;">
+            <div style="font-size:0.82rem;color:#8b949e;margin-bottom:6px;">ממוצע</div>
+            <div style="font-size:1.7rem;font-weight:900;color:#58a6ff;">{v_mean:,.1f}</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#21262d;border:1px solid #30363d;
+                      border-radius:12px;padding:16px 20px;text-align:center;">
+            <div style="font-size:0.82rem;color:#8b949e;margin-bottom:6px;">חציון</div>
+            <div style="font-size:1.7rem;font-weight:900;color:#3fb950;">{v_median:,.1f}</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#21262d;border:1px solid #30363d;
+                      border-radius:12px;padding:16px 20px;text-align:center;">
+            <div style="font-size:0.82rem;color:#8b949e;margin-bottom:6px;">מינימום</div>
+            <div style="font-size:1.7rem;font-weight:900;color:#d2a8ff;">{v_min:,.1f}</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:#21262d;border:1px solid #30363d;
+                      border-radius:12px;padding:16px 20px;text-align:center;">
+            <div style="font-size:0.82rem;color:#8b949e;margin-bottom:6px;">מקסימום</div>
+            <div style="font-size:1.7rem;font-weight:900;color:#f78166;">{v_max:,.1f}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         fig = go.Figure(go.Histogram(
             x=vals, nbinsx=hist_bins,
-            marker=dict(color="rgba(88,166,255,0.7)", line=dict(color="#58a6ff", width=1)),
-            hovertemplate="ערך: %{x}<br>תדירות: %{y}<extra></extra>",
+            marker=dict(color="rgba(88,166,255,0.75)", line=dict(color="#58a6ff", width=1.5)),
+            hovertemplate="<b>ערך:</b> %{x}<br><b>תדירות:</b> %{y}<extra></extra>",
         ))
-        fig.update_layout(**PLOT_LAYOUT, xaxis_title=hist_col, yaxis_title="תדירות",
-                          showlegend=False, bargap=0.05)
+        fig.add_vline(x=v_mean,   line_dash="dash", line_color="#58a6ff", line_width=2,
+                      annotation_text="ממוצע", annotation_font_size=14,
+                      annotation_font_color="#58a6ff", annotation_position="top right")
+        fig.add_vline(x=v_median, line_dash="dot",  line_color="#3fb950", line_width=2,
+                      annotation_text="חציון", annotation_font_size=14,
+                      annotation_font_color="#3fb950", annotation_position="top left")
+        fig.update_layout(
+            **PLOT_LAYOUT,
+            height=460,
+            xaxis_title=dict(text=hist_col, font=dict(size=15)),
+            yaxis_title=dict(text="מספר רשומות", font=dict(size=15)),
+            xaxis=dict(**PLOT_LAYOUT["xaxis"], tickfont=dict(size=13, color="#8b949e")),
+            yaxis=dict(**PLOT_LAYOUT["yaxis"], tickfont=dict(size=13, color="#8b949e")),
+            showlegend=False,
+            bargap=0.06,
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
