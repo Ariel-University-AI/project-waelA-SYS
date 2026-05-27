@@ -579,7 +579,7 @@ def get_reasons(prediction, גובה, מרחק_כביש, מרחק_מגורים, 
     return reasons
 
 
-# ── PDF helpers ──────────────────────────────────────────────────────────────
+# ── PDF / DWF helpers ────────────────────────────────────────────────────────
 def extract_pdf_text(pdf_file) -> str:
     if not _PDF_OK:
         return ""
@@ -588,6 +588,42 @@ def extract_pdf_text(pdf_file) -> str:
         return "\n".join(p.extract_text() or "" for p in reader.pages)
     except Exception:
         return ""
+
+
+def extract_dwf_text(dwf_file) -> str:
+    """DWF/DWFX הם ארכיוני ZIP המכילים XML — חילוץ ישיר ללא תלות חיצונית."""
+    import zipfile, io
+    try:
+        bio = io.BytesIO(dwf_file.read())
+        if not zipfile.is_zipfile(bio):
+            return ""
+        bio.seek(0)
+        texts = []
+        with zipfile.ZipFile(bio, "r") as zf:
+            for name in zf.namelist():
+                if name.lower().endswith((".xml", ".rels", ".w2d")):
+                    try:
+                        raw   = zf.read(name).decode("utf-8", errors="ignore")
+                        clean = re.sub(r"<[^>]+>", " ", raw)
+                        clean = re.sub(r"&[a-z]+;",  " ", clean)
+                        clean = re.sub(r"\s+",        " ", clean).strip()
+                        if clean:
+                            texts.append(clean)
+                    except Exception:
+                        pass
+        return "\n".join(texts)
+    except Exception:
+        return ""
+
+
+def extract_file_text(f) -> tuple[str, str]:
+    """מחזיר (טקסט, סוג_קובץ). סוג: 'pdf' | 'dwf' | 'unknown'."""
+    name = (f.name or "").lower()
+    if name.endswith(".pdf"):
+        return extract_pdf_text(f), "pdf"
+    if name.endswith((".dwf", ".dwfx")):
+        return extract_dwf_text(f), "dwf"
+    return "", "unknown"
 
 
 def _find_num(pattern: str, text: str, default=None):
@@ -788,22 +824,24 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 # ── 11. ניתוח תוכנית בנייה מ-PDF ─────────────────────────────────────────────
 st.markdown('<div class="section">', unsafe_allow_html=True)
-st.markdown('<div class="sec-title">📄 ניתוח תוכנית בנייה מ-PDF <span class="tag">Auto-Parse</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="sec-title">📄 ניתוח תוכנית בנייה — PDF / DWF <span class="tag">Auto-Parse</span></div>', unsafe_allow_html=True)
 
-if not _PDF_OK:
-    st.warning("⚠️ ספריית PyPDF2 לא מותקנת. הרץ: `pip install PyPDF2`")
-else:
-    st.markdown(
-        "<p style='color:#8b949e;font-size:0.9rem;margin-bottom:14px;'>"
-        "העלה קובץ PDF של תוכנית בנייה — המערכת תחלץ את הנתונים אוטומטית ותנבא את הסטטוס.</p>",
-        unsafe_allow_html=True,
-    )
-    pdf_up = st.file_uploader("בחר קובץ PDF", type="pdf", key="pdf_plan", label_visibility="collapsed")
+st.markdown(
+    "<p style='color:#8b949e;font-size:0.9rem;margin-bottom:14px;'>"
+    "העלה קובץ PDF או DWF/DWFX של תוכנית בנייה — המערכת תחלץ את הנתונים אוטומטית ותנבא את הסטטוס.</p>",
+    unsafe_allow_html=True,
+)
+plan_up = st.file_uploader("בחר קובץ PDF / DWF", type=["pdf", "dwf", "dwfx"],
+                            key="pdf_plan", label_visibility="collapsed")
 
-    if pdf_up is not None:
+if plan_up is not None:
         with st.spinner("מנתח את תוכנית הבנייה..."):
-            raw_text = extract_pdf_text(pdf_up)
-            parsed   = parse_building_plan(raw_text)
+            raw_text, file_type = extract_file_text(plan_up)
+            parsed = parse_building_plan(raw_text)
+
+        if file_type == "pdf" and not _PDF_OK:
+            st.warning("⚠️ ספריית PyPDF2 לא מותקנת. לחילוץ מ-PDF הרץ: `pip install PyPDF2`")
+            raw_text = ""
 
         ALL_FIELDS = [
             "שטח_מבוקש_מ2", "גובה_מבנה_מטר", "מרחק_מכביש_מטר", "מרחק_ממגורים_מטר",
@@ -811,13 +849,15 @@ else:
             "פנלים_סולאריים", "ייעוד_חקלאי", "עמידה_בתמא", "מכתב_המלצה",
         ]
 
+        _fmt = "DWF" if file_type == "dwf" else "PDF"
         if not raw_text.strip():
-            st.error("❌ לא ניתן לחלץ טקסט מה-PDF. ייתכן שהקובץ סרוק כתמונה (אין שכבת טקסט).")
+            st.error(f"❌ לא ניתן לחלץ טקסט מה-{_fmt}. "
+                     f"{'ייתכן שה-DWF אינו מכיל שכבת XML קריאה.' if file_type == 'dwf' else 'ייתכן שהקובץ סרוק כתמונה (אין שכבת טקסט).'}")
         else:
             n_found = len(parsed)
             st.success(f"✅ זוהו **{n_found}** שדות מתוך {len(ALL_FIELDS)} — ניתן לערוך לפני הניבוי")
 
-            with st.expander("📃 טקסט גולמי שחולץ מה-PDF"):
+            with st.expander(f"📃 טקסט גולמי שחולץ מה-{_fmt}"):
                 st.text(raw_text[:3000] + ("…" if len(raw_text) > 3000 else ""))
 
             st.markdown("**✏️ ערוך ואשר את הנתונים שזוהו:**")
