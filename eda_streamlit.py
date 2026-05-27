@@ -4,7 +4,14 @@ EDA — ניתוח נתונים חקלאיים
 """
 
 import os
+import re
 import numpy as np
+try:
+    import PyPDF2 as _pypdf2
+    _PDF_OK = True
+except ImportError:
+    _pypdf2 = None
+    _PDF_OK = False
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -572,6 +579,104 @@ def get_reasons(prediction, גובה, מרחק_כביש, מרחק_מגורים, 
     return reasons
 
 
+# ── PDF helpers ──────────────────────────────────────────────────────────────
+def extract_pdf_text(pdf_file) -> str:
+    if not _PDF_OK:
+        return ""
+    try:
+        reader = _pypdf2.PdfReader(pdf_file)
+        return "\n".join(p.extract_text() or "" for p in reader.pages)
+    except Exception:
+        return ""
+
+
+def _find_num(pattern: str, text: str, default=None):
+    m = re.search(pattern, text)
+    if m:
+        try:
+            return float(m.group(1).replace(",", ""))
+        except Exception:
+            pass
+    return default
+
+
+def parse_building_plan(text: str) -> dict:
+    """חילוץ שדות מתוכנית בנייה חקלאית."""
+    res = {}
+
+    # שטח מבוקש
+    v = _find_num(r'שטח[^\d\n]{0,20}?(\d[\d,\.]*)\s*(?:מ"ר|מ\'\'ר|מטר\s*רבוע)', text)
+    if v:
+        res["שטח_מבוקש_מ2"] = int(v)
+
+    # גובה מבנה
+    v = _find_num(r'גובה[^\d\n]{0,15}?(\d[\d,\.]*)\s*(?:מ\'|מטר\b)', text)
+    if v:
+        res["גובה_מבנה_מטר"] = float(v)
+
+    # מרחק מכביש
+    v = _find_num(r'מרחק\s*מ?כביש[^\d\n]{0,15}?(\d[\d,\.]*)\s*(?:מ\'|מטר\b)', text)
+    if v:
+        res["מרחק_מכביש_מטר"] = int(v)
+
+    # מרחק ממגורים
+    v = _find_num(r'מרחק\s*מ?מגורים[^\d\n]{0,15}?(\d[\d,\.]*)\s*(?:מ\'|מטר\b)', text)
+    if v:
+        res["מרחק_ממגורים_מטר"] = int(v)
+
+    # שטח חקלאי בדונמים
+    v = _find_num(r'שטח\s*חקלאי[^\d\n]{0,15}?(\d[\d,\.]*)\s*(?:דונם|דונמים)', text)
+    if v:
+        res["שטח_חקלאי_דונם"] = int(v)
+
+    # מספר בעלי חיים
+    v = _find_num(r'(?:מספר|כמות)\s*בעלי\s*חיים[^\d\n]{0,15}?(\d[\d,\.]*)', text)
+    if v:
+        res["מספר_בעלי_חיים"] = int(v)
+
+    # סוג מבנה — חיפוש מילולי
+    for bt in BUILDING_TYPES:
+        if bt in text:
+            res["סוג_מבנה"] = bt
+            break
+
+    # מחוז ואזור
+    for dist_key, regions in DISTRICT_REGIONS.items():
+        if dist_key in text:
+            res["מחוז"] = dist_key
+        for region in regions:
+            if region in text:
+                res["מחוז"] = dist_key
+                res["אזור"] = region
+                break
+
+    # כן/לא — פנלים סולאריים
+    if re.search(r'פנלים\s*סולאריים[^כלא\n]{0,10}כן', text):
+        res["פנלים_סולאריים"] = "כן"
+    elif re.search(r'פנלים\s*סולאריים[^כלא\n]{0,10}לא', text):
+        res["פנלים_סולאריים"] = "לא"
+
+    # ייעוד חקלאי
+    if re.search(r'ייעוד\s*חקלאי[^כלא\n]{0,10}כן', text):
+        res["ייעוד_חקלאי"] = "כן"
+    elif re.search(r'(?:ייעוד[^\n]{0,10}אינו|אינו\s*חקלאי)', text):
+        res["ייעוד_חקלאי"] = "לא"
+
+    # עמידה בתמ"א
+    if re.search(r'(?:עמידה\s*ב)?תמ.א[^כלא\n]{0,10}כן', text):
+        res["עמידה_בתמא"] = "כן"
+    elif re.search(r'(?:אי.עמידה|אינ[ו_]\s*עומד)\s*ב?תמ.א', text):
+        res["עמידה_בתמא"] = "לא"
+
+    # מכתב המלצה
+    if re.search(r'מכתב\s*המלצה[^כלא\n]{0,10}כן', text):
+        res["מכתב_המלצה"] = "כן"
+    elif re.search(r'(?:אין|ללא|חסר)\s*מכתב\s*המלצה', text):
+        res["מכתב_המלצה"] = "לא"
+
+    return res
+
+
 # ── 10. ניבוי בקשה חדשה ──────────────────────────────────────────────────────
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.markdown('<div class="sec-title">🤖 ניבוי סטטוס בקשה חדשה <span class="tag">Predict</span></div>', unsafe_allow_html=True)
@@ -679,3 +784,176 @@ else:
         """, unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ── 11. ניתוח תוכנית בנייה מ-PDF ─────────────────────────────────────────────
+st.markdown('<div class="section">', unsafe_allow_html=True)
+st.markdown('<div class="sec-title">📄 ניתוח תוכנית בנייה מ-PDF <span class="tag">Auto-Parse</span></div>', unsafe_allow_html=True)
+
+if not _PDF_OK:
+    st.warning("⚠️ ספריית PyPDF2 לא מותקנת. הרץ: `pip install PyPDF2`")
+else:
+    st.markdown(
+        "<p style='color:#8b949e;font-size:0.9rem;margin-bottom:14px;'>"
+        "העלה קובץ PDF של תוכנית בנייה — המערכת תחלץ את הנתונים אוטומטית ותנבא את הסטטוס.</p>",
+        unsafe_allow_html=True,
+    )
+    pdf_up = st.file_uploader("בחר קובץ PDF", type="pdf", key="pdf_plan", label_visibility="collapsed")
+
+    if pdf_up is not None:
+        with st.spinner("מנתח את תוכנית הבנייה..."):
+            raw_text = extract_pdf_text(pdf_up)
+            parsed   = parse_building_plan(raw_text)
+
+        ALL_FIELDS = [
+            "שטח_מבוקש_מ2", "גובה_מבנה_מטר", "מרחק_מכביש_מטר", "מרחק_ממגורים_מטר",
+            "שטח_חקלאי_דונם", "מספר_בעלי_חיים", "סוג_מבנה", "מחוז", "אזור",
+            "פנלים_סולאריים", "ייעוד_חקלאי", "עמידה_בתמא", "מכתב_המלצה",
+        ]
+
+        if not raw_text.strip():
+            st.error("❌ לא ניתן לחלץ טקסט מה-PDF. ייתכן שהקובץ סרוק כתמונה (אין שכבת טקסט).")
+        else:
+            n_found = len(parsed)
+            st.success(f"✅ זוהו **{n_found}** שדות מתוך {len(ALL_FIELDS)} — ניתן לערוך לפני הניבוי")
+
+            with st.expander("📃 טקסט גולמי שחולץ מה-PDF"):
+                st.text(raw_text[:3000] + ("…" if len(raw_text) > 3000 else ""))
+
+            st.markdown("**✏️ ערוך ואשר את הנתונים שזוהו:**")
+            pp1, pp2, pp3 = st.columns(3)
+
+            with pp1:
+                _districts = list(DISTRICT_REGIONS.keys())
+                _def_dist  = parsed.get("מחוז", _districts[0])
+                if _def_dist not in _districts:
+                    _def_dist = _districts[0]
+                pp_מחוז = st.selectbox("מחוז", _districts,
+                                        index=_districts.index(_def_dist), key="pp_מחוז")
+
+                _regions = DISTRICT_REGIONS[pp_מחוז]
+                _def_reg = parsed.get("אזור", _regions[0])
+                if _def_reg not in _regions:
+                    _def_reg = _regions[0]
+                pp_אזור = st.selectbox("אזור", _regions,
+                                        index=_regions.index(_def_reg), key="pp_אזור")
+
+                _def_סוג = parsed.get("סוג_מבנה", BUILDING_TYPES[0])
+                if _def_סוג not in BUILDING_TYPES:
+                    _def_סוג = BUILDING_TYPES[0]
+                pp_סוג = st.selectbox("סוג מבנה", BUILDING_TYPES,
+                                       index=BUILDING_TYPES.index(_def_סוג), key="pp_סוג")
+
+                pp_ייעוד = st.selectbox("ייעוד חקלאי", ["כן", "לא"],
+                                         index=0 if parsed.get("ייעוד_חקלאי", "כן") == "כן" else 1,
+                                         key="pp_ייעוד")
+
+            with pp2:
+                pp_שטח = st.number_input("שטח מבוקש (מ״ר)", min_value=10, max_value=5000,
+                                          value=max(10, int(parsed.get("שטח_מבוקש_מ2", 200))),
+                                          step=10, key="pp_שטח")
+                pp_חקלאי = st.number_input("שטח חקלאי (דונם)", min_value=1, max_value=500,
+                                             value=max(1, int(parsed.get("שטח_חקלאי_דונם", 20))),
+                                             step=1, key="pp_חקלאי")
+                pp_בעח = st.number_input("מספר בעלי חיים", min_value=0, max_value=1000,
+                                          value=int(parsed.get("מספר_בעלי_חיים", 0)),
+                                          step=10, key="pp_בעח")
+                pp_גובה = st.number_input("גובה מבנה (מ׳)", min_value=1.0, max_value=20.0,
+                                           value=float(parsed.get("גובה_מבנה_מטר", 4.0)),
+                                           step=0.5, key="pp_גובה")
+
+            with pp3:
+                pp_כביש = st.number_input("מרחק מכביש (מ׳)", min_value=0, max_value=5000,
+                                           value=int(parsed.get("מרחק_מכביש_מטר", 500)),
+                                           step=50, key="pp_כביש")
+                pp_מגורים = st.number_input("מרחק ממגורים (מ׳)", min_value=0, max_value=5000,
+                                              value=int(parsed.get("מרחק_ממגורים_מטר", 200)),
+                                              step=50, key="pp_מגורים")
+                pp_פנלים = st.selectbox("פנלים סולאריים", ["כן", "לא"],
+                                         index=0 if parsed.get("פנלים_סולאריים", "לא") == "כן" else 1,
+                                         key="pp_פנלים")
+                pp_תמא = st.selectbox("עמידה בתמ״א", ["כן", "לא"],
+                                       index=0 if parsed.get("עמידה_בתמא", "כן") == "כן" else 1,
+                                       key="pp_תמא")
+                pp_מכתב = st.selectbox("מכתב המלצה", ["כן", "לא"],
+                                        index=0 if parsed.get("מכתב_המלצה", "לא") == "כן" else 1,
+                                        key="pp_מכתב")
+
+            # כרטיס תקנות
+            br_pp = BUILDING_RULES.get(pp_סוג, {})
+            if br_pp:
+                _h  = br_pp.get("גובה_מקס", "—")
+                _dr = br_pp.get("מרחק_מגורים_מין", "—")
+                _dk = br_pp.get("מרחק_כביש_מין", "—")
+                _ex = br_pp.get("שטח_פטור", None)
+                _mx = br_pp.get("שטח_מקס", None)
+                _at = (f"{_ex:,} מ\"ר (פטור מהיתר)" if _ex else
+                       f"{_mx:,} מ\"ר (תקרה)" if _mx else "לפי היתר")
+                st.markdown(f"""
+                <div style="background:#21262d;border:1px solid #30363d;border-radius:10px;
+                            padding:14px 18px;margin:12px 0;font-size:0.88rem;direction:rtl;">
+                  <div style="color:#58a6ff;font-weight:700;margin-bottom:8px;">📋 תקנות — {pp_סוג}</div>
+                  <table style="width:100%;border-collapse:collapse;color:#e6edf3;">
+                    <tr><td style="padding:3px 0;color:#8b949e;">גובה מרבי</td>
+                        <td style="text-align:left;color:#ffa657;font-weight:600;">{_h} מ׳</td></tr>
+                    <tr><td style="padding:3px 0;color:#8b949e;">מרחק מינ. ממגורים</td>
+                        <td style="text-align:left;color:#ffa657;font-weight:600;">{_dr} מ׳</td></tr>
+                    <tr><td style="padding:3px 0;color:#8b949e;">מרחק מינ. מכביש</td>
+                        <td style="text-align:left;color:#ffa657;font-weight:600;">{_dk} מ׳</td></tr>
+                    <tr><td style="padding:3px 0;color:#8b949e;">שטח</td>
+                        <td style="text-align:left;color:#ffa657;font-weight:600;">{_at}</td></tr>
+                  </table>
+                </div>
+                """, unsafe_allow_html=True)
+
+            if st.button("🔍 נבא סטטוס לפי תוכנית הבנייה", use_container_width=True,
+                         type="primary", key="pp_predict"):
+                if model is None:
+                    st.warning("⚠️ לא נמצא model.pkl — הרץ תחילה את train_model.py")
+                else:
+                    _inp = pd.DataFrame([{
+                        "מחוז":               pp_מחוז,
+                        "אזור":               pp_אזור,
+                        "סוג_מבנה":           pp_סוג,
+                        "שטח_מבוקש_מ2":      pp_שטח,
+                        "שטח_חקלאי_דונם":    pp_חקלאי,
+                        "מספר_בעלי_חיים":    pp_בעח,
+                        "מרחק_מכביש_מטר":   float(pp_כביש),
+                        "מרחק_ממגורים_מטר": float(pp_מגורים),
+                        "גובה_מבנה_מטר":    pp_גובה,
+                        "פנלים_סולאריים":    pp_פנלים,
+                        "ייעוד_חקלאי":       pp_ייעוד,
+                        "עמידה_בתמא":        pp_תמא,
+                        "מכתב_המלצה":        pp_מכתב,
+                    }])
+
+                    _pred  = model.predict(_inp)[0]
+                    _proba = model.predict_proba(_inp)[0]
+                    _conf  = round(max(_proba) * 100, 1)
+                    _rsns  = get_reasons(_pred, pp_גובה, pp_כביש, pp_מגורים,
+                                         pp_סוג, pp_מכתב, pp_תמא, pp_ייעוד, pp_שטח)
+
+                    _color = {"מאושר": "#3fb950", "נדחה": "#f78166", "דרוש תיקון": "#ffa657"}.get(_pred, "#58a6ff")
+                    _icon  = {"מאושר": "✅", "נדחה": "❌", "דרוש תיקון": "⚠️"}.get(_pred, "🔵")
+
+                    _rhtml = ""
+                    if _rsns:
+                        _items = "".join(f'<li style="margin:6px 0;font-size:1rem;">{r}</li>' for r in _rsns)
+                        _rhtml = f"""
+                        <div style="margin-top:18px;text-align:right;">
+                          <div style="font-size:0.9rem;color:#8b949e;margin-bottom:8px;">סיבות:</div>
+                          <ul style="list-style:none;padding:0;margin:0;color:#e6edf3;">{_items}</ul>
+                        </div>"""
+
+                    st.markdown(f"""
+                    <div style="margin-top:24px;background:#21262d;border:2px solid {_color};
+                                border-radius:16px;padding:28px 32px;text-align:center;">
+                      <div style="font-size:2.8rem;margin-bottom:8px;">{_icon}</div>
+                      <div style="font-size:2rem;font-weight:900;color:{_color};margin-bottom:8px;">{_pred}</div>
+                      <div style="font-size:1rem;color:#8b949e;">רמת ביטחון: <strong style="color:{_color}">{_conf}%</strong></div>
+                      {_rhtml}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
+
