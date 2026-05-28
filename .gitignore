@@ -26,3 +26,10 @@ agricultural_permits_dataset.csv
 # OS
 .DS_Store
 Thumbs.db
+
+# pip install artifacts (created by shell misparse of >=version)
+=*
+
+# Data / document files
+agricultural_permits_dataset_sofi.csv
+*.pdf
