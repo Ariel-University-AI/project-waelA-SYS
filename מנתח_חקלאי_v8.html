@@ -1,512 +1,1311 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מנת"ח חקלאי — מערכת ניתוח תכנוני</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#F4F2ED;--surface:#FFFFFF;--surface2:#F8F7F4;--border:#E0DDD6;
-    --text:#1A1916;--text2:#5C5A55;--text3:#8A8880;
-    --blue:#1A5EA8;--blue-bg:#EBF2FB;--blue-light:#B5D4F4;
-    --green:#2D6E10;--green-bg:#EAF3DE;--green-light:#C0DD97;
-    --amber:#7A4A08;--amber-bg:#FAEEDA;--amber-light:#FAC775;
-    --red:#8A2020;--red-bg:#FCEBEB;--red-light:#F7C1C1;
-    --gray:#5F5E5A;--gray-bg:#F1EFE8;
-    --radius:8px;--radius-lg:12px;
-  }
-  body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;direction:rtl;text-align:right}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מנת"ח חקלאי — מערכת ניתוח תכנוני</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
 
-  /* ── Layout ── */
-  .app{display:flex;flex-direction:column;min-height:100vh}
-  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100;flex-wrap:wrap}
-  .topbar-logo{font-size:18px;font-weight:700;color:var(--blue);letter-spacing:-0.5px;white-space:nowrap}
-  .topbar-sub{font-size:12px;color:var(--text3);border-right:1px solid var(--border);padding-right:16px;margin-right:8px;white-space:nowrap}
-  .topbar-badge{background:var(--amber-bg);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
-  .main{display:flex;flex:1}
-  .sidebar{width:260px;background:var(--surface);border-left:1px solid var(--border);padding:16px 0;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
-  .content{flex:1;padding:24px;overflow-x:hidden;min-width:0}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
-  /* ── API Key Banner ── */
-  #apikey-banner{background:var(--amber-bg);border-bottom:2px solid var(--amber-light);padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:13px}
-  #apikey-banner input{flex:1;max-width:420px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:'Heebo',sans-serif;direction:ltr;text-align:left}
-  #apikey-banner button{padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-family:'Heebo',sans-serif;cursor:pointer}
-  #apikey-banner .key-ok{color:var(--green);font-weight:600}
+    :root {
+      --bg: #F4F2ED;
+      --surface: #FFFFFF;
+      --surface2: #F8F7F4;
+      --border: #E0DDD6;
+      --text: #1A1916;
+      --text2: #5C5A55;
+      --text3: #8A8880;
+      --blue: #1A5EA8;
+      --blue-bg: #EBF2FB;
+      --blue-light: #B5D4F4;
+      --green: #2D6E10;
+      --green-bg: #EAF3DE;
+      --green-light: #C0DD97;
+      --amber: #7A4A08;
+      --amber-bg: #FAEEDA;
+      --amber-light: #FAC775;
+      --red: #8A2020;
+      --red-bg: #FCEBEB;
+      --red-light: #F7C1C1;
+      --gray: #5F5E5A;
+      --gray-bg: #F1EFE8;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
 
-  /* ── Sidebar nav ── */
-  .nav-section{padding:4px 16px 8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 20px;cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;border-right:3px solid transparent;user-select:none}
-  .nav-item:hover{background:var(--surface2);color:var(--text)}
-  .nav-item.active{background:var(--blue-bg);color:var(--blue);border-right-color:var(--blue);font-weight:500}
-  .nav-badge{background:var(--red-bg);color:var(--red);font-size:10px;padding:1px 6px;border-radius:10px;margin-right:auto}
-  .nav-badge.warn{background:var(--amber-bg);color:var(--amber)}
-  .nav-badge.ok{background:var(--green-bg);color:var(--green)}
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+      direction: rtl;
+      text-align: right
+    }
 
-  /* ── Cards ── */
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
-  .card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-  .card-title{font-size:15px;font-weight:600;color:var(--text)}
-  .card-sub{font-size:12px;color:var(--text3)}
+    /* ── Layout ── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh
+    }
 
-  /* ── Badges ── */
-  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;white-space:nowrap}
-  .badge-blue{background:var(--blue-bg);color:var(--blue)}
-  .badge-green{background:var(--green-bg);color:var(--green)}
-  .badge-amber{background:var(--amber-bg);color:var(--amber)}
-  .badge-red{background:var(--red-bg);color:var(--red)}
-  .badge-gray{background:var(--gray-bg);color:var(--gray)}
-  .badge-lg{font-size:13px;padding:5px 12px;border-radius:6px}
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap
+    }
 
-  /* ── Buttons ── */
-  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:'Heebo',sans-serif}
-  .btn:hover{background:var(--surface2)}
-  .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-  .btn-primary:hover{background:#154E90}
-  .btn-sm{padding:5px 10px;font-size:12px}
-  .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .topbar-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: -0.5px;
+      white-space: nowrap
+    }
 
-  /* ── Forms ── */
-  .form-group{margin-bottom:14px}
-  .form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
-  .form-input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:'Heebo',sans-serif;color:var(--text);background:var(--surface);transition:border-color 0.15s}
-  .form-input:focus{outline:none;border-color:var(--blue)}
-  select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%238A8880' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 10px center;padding-left:28px}
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text3);
+      border-right: 1px solid var(--border);
+      padding-right: 16px;
+      margin-right: 8px;
+      white-space: nowrap
+    }
 
-  /* ── Upload ── */
-  .upload-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface2)}
-  .upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-bg)}
-  .upload-zone-icon{font-size:32px;margin-bottom:8px;color:var(--text3)}
-  .upload-zone-text{font-size:14px;color:var(--text2);margin-bottom:4px}
-  .upload-zone-sub{font-size:12px;color:var(--text3)}
+    .topbar-badge {
+      background: var(--amber-bg);
+      color: var(--amber);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      white-space: nowrap
+    }
 
-  /* ── File list ── */
-  .file-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;background:var(--surface)}
-  .file-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-  .file-icon-pdf{background:#FAECE7;color:#D85A30}
-  .file-icon-img{background:var(--blue-bg);color:var(--blue)}
-  .file-icon-doc{background:var(--green-bg);color:var(--green)}
-  .file-name{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .file-size{font-size:11px;color:var(--text3)}
-  .file-status{font-size:11px;padding:2px 7px;border-radius:4px}
-  .st-uploaded{background:var(--blue-bg);color:var(--blue)}
-  .st-parsed{background:var(--green-bg);color:var(--green)}
-  .st-ocr{background:var(--amber-bg);color:var(--amber)}
-  .st-failed{background:var(--red-bg);color:var(--red)}
-  .st-analyzing{background:var(--gray-bg);color:var(--gray)}
+    .main {
+      display: flex;
+      flex: 1
+    }
 
-  /* ── Source status ── */
-  .source-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--radius);background:var(--surface2);margin-bottom:6px}
-  .source-name{font-size:13px;font-weight:500}
-  .src-unavailable{background:var(--red-bg);color:var(--red)}
+    .sidebar {
+      width: 260px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 16px 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto
+    }
 
-  /* ── Tabs ── */
-  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
-  .tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all 0.15s}
-  .tab:hover{color:var(--text)}
-  .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .content {
+      flex: 1;
+      padding: 24px;
+      overflow-x: hidden;
+      min-width: 0
+    }
 
-  /* ── Table ── */
-  .tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
-  .tbl{width:100%;border-collapse:collapse;font-size:12px}
-  .tbl th{background:var(--surface2);padding:8px 10px;text-align:right;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
-  .tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-  .tbl tr:last-child td{border-bottom:none}
-  .tbl tr:hover td{background:var(--surface2)}
+    /* ── API Key Banner ── */
+    #apikey-banner {
+      background: var(--amber-bg);
+      border-bottom: 2px solid var(--amber-light);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px
+    }
 
-  /* ── Decision card ── */
-  .decision-card{border-radius:var(--radius-lg);padding:20px;margin-bottom:12px}
-  .dc-recommend{background:#EAF3DE;border:1px solid #C0DD97}
-  .dc-conditions{background:#FAEEDA;border:1px solid #FAC775}
-  .dc-clarify{background:#EBF2FB;border:1px solid #B5D4F4}
-  .dc-reject{background:#FCEBEB;border:1px solid #F7C1C1}
-  .dc-pending{background:var(--gray-bg);border:1px solid var(--border)}
+    #apikey-banner input {
+      flex: 1;
+      max-width: 420px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: 'Heebo', sans-serif;
+      direction: ltr;
+      text-align: left
+    }
 
-  /* ── Blockers ── */
-  .blocker-hard{display:inline-flex;align-items:center;gap:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-light);font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
-  .blocker-soft{display:inline-flex;align-items:center;gap:4px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-light);font-size:11px;padding:3px 8px;border-radius:4px}
+    #apikey-banner button {
+      padding: 6px 14px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: 'Heebo', sans-serif;
+      cursor: pointer
+    }
 
-  /* ── Determination card ── */
-  .det-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:10px}
+    #apikey-banner .key-ok {
+      color: var(--green);
+      font-weight: 600
+    }
 
-  /* ── Checklist ── */
-  .check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-  .check-item:last-child{border-bottom:none}
-  .check-num{font-size:11px;color:var(--text3);width:20px;text-align:center;flex-shrink:0;padding-top:2px}
-  .check-label{flex:1;font-size:13px}
-  .check-status{font-size:11px;padding:2px 7px;border-radius:4px;flex-shrink:0}
-  .cs-done{background:var(--green-bg);color:var(--green)}
-  .cs-pending{background:var(--gray-bg);color:var(--gray)}
-  .cs-na{background:var(--border);color:var(--text3)}
+    /* ── Sidebar nav ── */
+    .nav-section {
+      padding: 4px 16px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 8px
+    }
 
-  /* ── Progress ── */
-  .progress{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
-  .progress-fill{height:100%;border-radius:3px;background:var(--blue);transition:width 0.5s}
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 13px;
+      transition: all 0.15s;
+      border-right: 3px solid transparent;
+      user-select: none
+    }
 
-  /* ── Alert ── */
-  .alert{padding:12px 14px;border-radius:var(--radius);margin-bottom:12px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
-  .alert-info{background:var(--blue-bg);color:#0C447C;border:1px solid var(--blue-light)}
-  .alert-warn{background:var(--amber-bg);color:#633806;border:1px solid var(--amber-light)}
-  .alert-err{background:var(--red-bg);color:#791F1F;border:1px solid var(--red-light)}
-  .alert-ok{background:var(--green-bg);color:#27500A;border:1px solid var(--green-light)}
-  .alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text)
+    }
 
-  /* ── Misc ── */
-  .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
-  .ocr-flag{display:inline-flex;align-items:center;gap:4px;background:#FAC775;color:#412402;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600}
-  .section-num{font-size:11px;font-weight:700;color:var(--text3);background:var(--border);width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-  .section-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:16px}
-  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
-  .dot-green{background:#2D6E10}.dot-amber{background:#B87B0A}.dot-red{background:#A32D2D}.dot-gray{background:#8A8880}.dot-blue{background:#1A5EA8}
+    .nav-item.active {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border-right-color: var(--blue);
+      font-weight: 500
+    }
 
-  /* ── Spinner ── */
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0}
-  .big-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite}
+    .nav-badge {
+      background: var(--red-bg);
+      color: var(--red);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-right: auto
+    }
 
-  /* ── Grids ── */
-  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  .stat{background:var(--surface2);border-radius:var(--radius);padding:12px 14px}
-  .stat-label{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500}
-  .stat-value{font-size:18px;font-weight:700;color:var(--text)}
+    .nav-badge.warn {
+      background: var(--amber-bg);
+      color: var(--amber)
+    }
 
-  /* ── Loading overlay ── */
-  .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
-  .loading-title{font-size:17px;font-weight:600;color:var(--text)}
-  .loading-sub{font-size:13px;color:var(--text2)}
-  .loading-steps{font-size:12px;color:var(--text3);text-align:center;line-height:1.8}
+    .nav-badge.ok {
+      background: var(--green-bg);
+      color: var(--green)
+    }
 
-  @media(max-width:900px){
-    .sidebar{display:none}
-    .grid-4{grid-template-columns:1fr 1fr}
-    .grid-3{grid-template-columns:1fr 1fr}
-  }
-  @media print{
-    .sidebar,.topbar,.btn,#apikey-banner{display:none!important}
-    .content{padding:0}
-    .card{page-break-inside:avoid}
-  }
-</style>
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--text3)
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap
+    }
+
+    .badge-blue {
+      background: var(--blue-bg);
+      color: var(--blue)
+    }
+
+    .badge-green {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .badge-amber {
+      background: var(--amber-bg);
+      color: var(--amber)
+    }
+
+    .badge-red {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    .badge-gray {
+      background: var(--gray-bg);
+      color: var(--gray)
+    }
+
+    .badge-lg {
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Heebo', sans-serif
+    }
+
+    .btn:hover {
+      background: var(--surface2)
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue)
+    }
+
+    .btn-primary:hover {
+      background: #154E90
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed
+    }
+
+    /* ── Forms ── */
+    .form-group {
+      margin-bottom: 14px
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      margin-bottom: 5px
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: 'Heebo', sans-serif;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.15s
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--blue)
+    }
+
+    select.form-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%238A8880' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 10px center;
+      padding-left: 28px
+    }
+
+    /* ── Upload ── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface2)
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag {
+      border-color: var(--blue);
+      background: var(--blue-bg)
+    }
+
+    .upload-zone-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      color: var(--text3)
+    }
+
+    .upload-zone-text {
+      font-size: 14px;
+      color: var(--text2);
+      margin-bottom: 4px
+    }
+
+    .upload-zone-sub {
+      font-size: 12px;
+      color: var(--text3)
+    }
+
+    /* ── File list ── */
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      background: var(--surface)
+    }
+
+    .file-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0
+    }
+
+    .file-icon-pdf {
+      background: #FAECE7;
+      color: #D85A30
+    }
+
+    .file-icon-img {
+      background: var(--blue-bg);
+      color: var(--blue)
+    }
+
+    .file-icon-doc {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .file-size {
+      font-size: 11px;
+      color: var(--text3)
+    }
+
+    .file-status {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px
+    }
+
+    .st-uploaded {
+      background: var(--blue-bg);
+      color: var(--blue)
+    }
+
+    .st-parsed {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .st-ocr {
+      background: var(--amber-bg);
+      color: var(--amber)
+    }
+
+    .st-failed {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    .st-analyzing {
+      background: var(--gray-bg);
+      color: var(--gray)
+    }
+
+    /* ── Source status ── */
+    .source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      background: var(--surface2);
+      margin-bottom: 6px
+    }
+
+    .source-name {
+      font-size: 13px;
+      font-weight: 500
+    }
+
+    .src-unavailable {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      overflow-x: auto
+    }
+
+    .tab {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      white-space: nowrap;
+      transition: all 0.15s
+    }
+
+    .tab:hover {
+      color: var(--text)
+    }
+
+    .tab.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue)
+    }
+
+    /* ── Table ── */
+    .tbl-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border)
+    }
+
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .tbl th {
+      background: var(--surface2);
+      padding: 8px 10px;
+      text-align: right;
+      font-weight: 600;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      white-space: nowrap
+    }
+
+    .tbl td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top
+    }
+
+    .tbl tr:last-child td {
+      border-bottom: none
+    }
+
+    .tbl tr:hover td {
+      background: var(--surface2)
+    }
+
+    /* ── Decision card ── */
+    .decision-card {
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 12px
+    }
+
+    .dc-recommend {
+      background: #EAF3DE;
+      border: 1px solid #C0DD97
+    }
+
+    .dc-conditions {
+      background: #FAEEDA;
+      border: 1px solid #FAC775
+    }
+
+    .dc-clarify {
+      background: #EBF2FB;
+      border: 1px solid #B5D4F4
+    }
+
+    .dc-reject {
+      background: #FCEBEB;
+      border: 1px solid #F7C1C1
+    }
+
+    .dc-pending {
+      background: var(--gray-bg);
+      border: 1px solid var(--border)
+    }
+
+    /* ── Blockers ── */
+    .blocker-hard {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid var(--red-light);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600
+    }
+
+    .blocker-soft {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid var(--amber-light);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px
+    }
+
+    /* ── Determination card ── */
+    .det-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 10px
+    }
+
+    /* ── Checklist ── */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .check-item:last-child {
+      border-bottom: none
+    }
+
+    .check-num {
+      font-size: 11px;
+      color: var(--text3);
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      padding-top: 2px
+    }
+
+    .check-label {
+      flex: 1;
+      font-size: 13px
+    }
+
+    .check-status {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      flex-shrink: 0
+    }
+
+    .cs-done {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .cs-pending {
+      background: var(--gray-bg);
+      color: var(--gray)
+    }
+
+    .cs-na {
+      background: var(--border);
+      color: var(--text3)
+    }
+
+    /* ── Progress ── */
+    .progress {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--blue);
+      transition: width 0.5s
+    }
+
+    /* ── Alert ── */
+    .alert {
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start
+    }
+
+    .alert-info {
+      background: var(--blue-bg);
+      color: #0C447C;
+      border: 1px solid var(--blue-light)
+    }
+
+    .alert-warn {
+      background: var(--amber-bg);
+      color: #633806;
+      border: 1px solid var(--amber-light)
+    }
+
+    .alert-err {
+      background: var(--red-bg);
+      color: #791F1F;
+      border: 1px solid var(--red-light)
+    }
+
+    .alert-ok {
+      background: var(--green-bg);
+      color: #27500A;
+      border: 1px solid var(--green-light)
+    }
+
+    .alert-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px
+    }
+
+    /* ── Misc ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0
+    }
+
+    .ocr-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #FAC775;
+      color: #412402;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600
+    }
+
+    .section-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text3);
+      background: var(--border);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0
+    }
+
+    .dot-green {
+      background: #2D6E10
+    }
+
+    .dot-amber {
+      background: #B87B0A
+    }
+
+    .dot-red {
+      background: #A32D2D
+    }
+
+    .dot-gray {
+      background: #8A8880
+    }
+
+    .dot-blue {
+      background: #1A5EA8
+    }
+
+    /* ── Spinner ── */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      flex-shrink: 0
+    }
+
+    .big-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite
+    }
+
+    /* ── Grids ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px
+    }
+
+    .stat {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 12px 14px
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 4px;
+      font-weight: 500
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    /* ── Loading overlay ── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      gap: 16px
+    }
+
+    .loading-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .loading-sub {
+      font-size: 13px;
+      color: var(--text2)
+    }
+
+    .loading-steps {
+      font-size: 12px;
+      color: var(--text3);
+      text-align: center;
+      line-height: 1.8
+    }
+
+    @media(max-width:900px) {
+      .sidebar {
+        display: none
+      }
+
+      .grid-4 {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media print {
+
+      .sidebar,
+      .topbar,
+      .btn,
+      #apikey-banner {
+        display: none !important
+      }
+
+      .content {
+        padding: 0
+      }
+
+      .card {
+        page-break-inside: avoid
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div class="app" id="app">
+  <div class="app" id="app">
 
-<!-- API KEY BANNER -->
-<div id="apikey-banner" style="display:none">
-  <span>🔑 <strong>Anthropic API Key נדרש:</strong></span>
-  <input type="password" id="api-key-input" placeholder="sk-ant-..." />
-  <button onclick="saveKey()">שמור</button>
-  <span id="key-status" style="font-size:12px;color:var(--text3)">המפתח נשמר בזיכרון הדפדפן בלבד ואינו נשלח לשום שרת מלבד api.anthropic.com</span>
-</div>
-
-<!-- TOPBAR -->
-<div class="topbar">
-  <span class="topbar-logo">מנת"ח חקלאי</span>
-  <span class="topbar-sub">מערכת ניתוח תכנוני לחוות דעת חקלאית — משרד החקלאות וביטחון המזון</span>
-  <span class="topbar-badge">⚠ כלי פנימי בלבד — אינו מחליף שיקול דעת מקצועי</span>
-  <div style="margin-right:auto;display:flex;align-items:center;gap:8px">
-    <span id="topbar-case" style="font-size:12px;color:var(--text3)">אין תיק פעיל</span>
-    <div class="dot dot-gray" id="topbar-dot"></div>
-  </div>
-</div>
-
-<div class="main">
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="nav-section">ניהול תיק</div>
-  <div class="nav-item active" onclick="showSection('intake')" id="nav-intake">📂 קליטת תיק חדש</div>
-  <div class="nav-item" onclick="showSection('status')" id="nav-status">📋 סטטוס כללי</div>
-
-  <div class="nav-section">ניתוח</div>
-  <div class="nav-item" onclick="showSection('documents')" id="nav-documents">📄 מסמכים שנקלטו<span class="nav-badge warn" id="badge-docs" style="display:none">!</span></div>
-  <div class="nav-item" onclick="showSection('threshold')" id="nav-threshold">🔒 בדיקת סף ויסוד</div>
-  <div class="nav-item" onclick="showSection('normative')" id="nav-normative">🗺 מפה נורמטיבית</div>
-  <div class="nav-item" onclick="showSection('analysis')" id="nav-analysis">🔍 ניתוח הבקשה</div>
-
-  <div class="nav-section">הכרעה</div>
-  <div class="nav-item" onclick="showSection('determinations')" id="nav-determinations">📌 כרטיסי קביעה</div>
-  <div class="nav-item" onclick="showSection('comparison')" id="nav-comparison">⚖️ מבוקש מול מותר</div>
-  <div class="nav-item" onclick="showSection('blockers')" id="nav-blockers">🚫 חסמים ודגלים<span class="nav-badge" id="badge-blockers" style="display:none">0</span></div>
-  <div class="nav-item" onclick="showSection('opinion')" id="nav-opinion">📝 חוות דעת ראשונית</div>
-  <div class="nav-item" onclick="showSection('appendix')" id="nav-appendix">🗃 נספח עבודה פנימי</div>
-
-  <div style="margin:16px;padding-top:16px;border-top:1px solid var(--border)">
-    <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px">מקורות חיצוניים</div>
-    <div class="source-item"><span class="source-name" style="font-size:12px">מידע תכנוני</span><span class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
-    <div class="source-item"><span class="source-name" style="font-size:12px">GovMap API</span><span class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
-    <div class="source-item"><span class="source-name" style="font-size:12px">XPlan</span><span class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5">ⓘ מקורות חיצוניים אינם נגישים. כל שדה תלוי-מקור מוחזר fail-closed.</div>
-  </div>
-
-  <div style="margin:0 16px 16px;padding-top:12px;border-top:1px solid var(--border)">
-    <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="resetAll()">🔄 תיק חדש</button>
-    <button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:6px" onclick="window.print()">🖨 הדפס דוח</button>
-  </div>
-</div>
-
-<!-- MAIN CONTENT -->
-<div class="content" id="main-content">
-
-<!-- INTAKE -->
-<div id="sec-intake">
-  <div class="section-title"><span class="section-num">1</span>קליטת תיק — מטא-דאטה ומסמכים</div>
-  <div class="alert alert-warn">
-    <span class="alert-icon">⚠</span>
-    <div><strong>מקורות חיצוניים לא נגישים:</strong> מידע תכנוני, GovMap ו-XPlan אינם נגישים. המערכת תנתח אך ורק מסמכים שתעלה ידנית. כל שדה הדורש מקור חיצוני יסומן <strong>חסר/לא נגיש</strong> ויוחזר "נדרש בירור".</div>
-  </div>
-  <div class="grid-2" style="gap:16px;align-items:start">
-    <div class="card">
-      <div class="card-header"><span class="card-title">📋 פרטי התיק</span></div>
-      <div class="form-group"><label class="form-label">מספר תיק / מזהה בקשה</label><input class="form-input" type="text" id="f-case" placeholder="לדוג׳ 2025-YYYY-001"></div>
-      <div class="grid-2" style="gap:8px">
-        <div class="form-group" style="position:relative">
-  <label class="form-label">יישוב</label>
-  <input class="form-input" type="text" id="f-yishuv" placeholder="הקלד לחיפוש ישוב..." autocomplete="off"
-    oninput="filterYishuvim(this.value)"
-    onfocus="filterYishuvim(this.value)"
-    onblur="setTimeout(()=>{document.getElementById('yishuv-dropdown').style.display='none'},200)">
-  <div id="yishuv-dropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius);max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
-</div>
-<script>
-const YISHUVIM = ["אבו גוש", "אבו סנאן", "אבו קרינאת", "אבטין", "אביאל", "אביגדור", "אביחיל", "אביטל", "אבירים", "אבן מנחם", "אבן ספיר", "אבן שמואל", "אבנת", "אודים", "אודם", "אוחד", "אופקים", "אור הגנוז", "אור הנר", "אור יהודה", "אור עקיבא", "אורה", "אורות", "אורים", "אורנים", "אורנית", "אושה", "אזור", "אחווה", "אחוזם", "אחוזת ברק", "אחיהוד", "אחיטוב", "אחיסמך", "אחיעזר", "איבים", "איילון", "איילת השחר", "אילון", "אילות", "אילניה", "אכסאל", "אל-בטוף", "אלומה", "אלומות", "אלון הגליל", "אלון מורה", "אלון שבות", "אלוני אבא", "אלוני הבשן", "אלוני יצחק", "אלונים", "אלי-עד", "אליאב", "אליכין", "אלישיב", "אלישמע", "אלמגור", "אלמוג", "אלעד", "אלעזר", "אלפי מנשה", "אלקוש", "אלקנה", "אמירים", "אמציה", "אניעם", "אספר", "אעבלין", "אפיק", "אפיקים", "אפק", "אפרת", "ארבל", "ארגמן", "ארז", "אשבול", "אשדוד", "אשדות יעקב איחוד", "אשדות יעקב מאוחד", "אשוח", "אשחר", "אשכולות", "אשל הנשיא", "אשלים", "אשקלון", "אשרת", "אשתאול", "באקה אל-גרביה", "באר גנים", "באר טוביה", "באר יעקב", "באר מילכה", "באר שבע", "בארות יצחק", "בארותיים", "בארי", "בוסתן הגליל", "בועיינה נוגידאת", "בוקעתא", "בור שחורה", "ביצרון", "ביר אל-מכסור", "בירייה", "בית אורן", "בית אל", "בית אלעזרי", "בית אלפא", "בית אריה", "בית ברל", "בית גוברין", "בית גן", "בית דגן", "בית הגדי", "בית הלוי", "בית הלל", "בית העמק", "בית הערבה", "בית זיד", "בית זית", "בית זרע", "בית חגי", "בית חורון", "בית חירות", "בית חלקיה", "בית חנן", "בית חנניה", "בית חשמונאי", "בית יהושע", "בית יוסף", "בית ינאי", "בית יצחק-שער חפר", "בית כנף", "בית לחם הגלילית", "בית מאיר", "בית נחמיה", "בית ניר", "בית נקופה", "בית עובד", "בית עוזיאל", "בית עזרא", "בית עין", "בית עריף", "בית קמה", "בית קשת", "בית רבן", "בית רימון", "בית שאן", "בית שמש", "בית שערים", "בית שקמה", "ביתן אהרן", "ביתר עילית", "בן זכאי", "בן עמי", "בן שמן", "בני ברק", "בני דרום", "בני דרר", "בני יהודה", "בני עטרות", "בני עיש", "בנימינה-גבעת עדה", "בסמה", "בסמת טבעון", "בענה", "בצרה", "בצת", "בקוע", "בקעות", "בר גיורא", "בר יוחאי", "ברוכין", "ברור חיל", "ברכה", "ברכיה", "ברעם", "ברקאי", "ברקן", "ברקת", "בת הדר", "בת חן", "בת חפר", "בת ים", "בת עין", "בת שלמה", "גאולה", "גאולי תימן", "גאליה", "גבולות", "גבים", "גבע", "גבע בנימין", "גבע כרמל", "גבעון החדשה", "גבעות בר", "גבעת אבני", "גבעת ברנר", "גבעת השלושה", "גבעת יואב", "גבעת יערים", "גבעת נילי", "גבעת עוז", "גבעת שמואל", "גבעת שפירא", "גבעתי", "גבעתיים", "גברעם", "גדות", "גדיש", "גדעונה", "גולן", "גונן", "גורן", "גורנות הגליל", "גזית", "גזר", "גיאה", "גיבתון", "גיזו", "גיל עם", "גילון", "גילת", "גינוסר", "גיניגר", "גינתון", "גלאון", "גלגל", "גליל ים", "גמזו", "גן הדרום", "גן השומרון", "גן חיים", "גן יאשיה", "גן יבנה", "גן נר", "גן שורק", "גן שלמה", "גן שמואל", "גנות", "גנות הדר", "גני טל", "גני יוחנן", "גני מודיעין", "גני תקווה", "גנר", "געש", "גפן", "גרופית", "גשר", "גשר הזיו", "גשרון", "גת", "גת רימון", "דבורה", "דבוריה", "דברת", "דגניה א", "דגניה ב", "דובב", "דור", "דורות", "דחי", "דייר חנא", "דימונה", "דיר אל-אסד", "דיר חנא", "דישון", "דלייה", "דלתון", "דן", "דפנה", "דקל", "האון", "הבונים", "הגושרים", "הוד השרון", "הושעיה", "הזורע", "הזורעים", "החותרים", "הילה", "הכפר הירוק", "המעפיל", "הסוללים", "העוגן", "הר אדר", "הר גילה", "הר עמשא", "הראל", "הרדוף", "הרצליה", "הררית", "זוהר", "זיקים", "זיתן", "זכרון יעקב", "זמר", "זנוח", "זרועה", "זרזיר", "חבצלת השרון", "חגור", "חגי", "חגלה", "חד-נס", "חדיד", "חדרה", "חולדה", "חולון", "חולית", "חולתה", "חוסן", "חוסנייה", "חופית", "חוקוק", "חורה", "חורפיש", "חורשים", "חיבת ציון", "חיפה", "חירות", "חכליל", "חלוץ", "חלמיש", "חמד", "חמדיה", "חמדת", "חמרה", "חמת גדר", "חניאל", "חניתה", "חנתון", "חספין", "חפץ חיים", "חצב", "חצבה", "חצור הגלילית", "חצור-אשדוד", "חצרים", "חרב לאת", "חרוצים", "חריש", "חרמש", "חרשים", "חשמונאים", "טבריה", "טובא-זנגריה", "טורעאן", "טייבה", "טייבה בעמק", "טירה", "טירת יהודה", "טירת כרמל", "טירת צבי", "טל מנשה", "טל שחר", "טללים", "טלמון", "טמרה", "טמרה יזרעאל", "יבול", "יבנאל", "יבנה", "יגור", "יגל", "יד בנימין", "יד חנה", "יד מרדכי", "יד נתן", "יד רמבם", "ידידה", "יהוד-מונוסון", "יהל", "יובל", "יובלים", "יודפת", "יונתן", "יושיביה", "יזרעאל", "יחיעם", "יכיני", "ינוח-גת", "ינון", "יסוד המעלה", "יסודות", "יספיף", "יעד", "יעל", "יערה", "יפיע", "יפית", "יפעת", "יפרח", "יצהר", "יציץ", "יקום", "יקיר", "יקנעם עילית", "ירדנה", "ירוחם", "ירושלים", "ירחיב", "ירכא", "ירקונה", "ישע", "ישרש", "יתד", "כאבול", "כאוכב אבו אל-היג", "כברי", "כדורי", "כוכב השחר", "כוכב יאיר", "כוכב מיכאל", "כורזים", "כחל", "כינרות", "כיסופים", "כישור", "כלנית", "כמאנה", "כנות", "כנף", "כנרת מושבה", "כנרת קבוצה", "כסיפה", "כסלון", "כסרא-סמיע", "כעביה-טבאש", "כפר אדומים", "כפר אוריה", "כפר אחים", "כפר ביאליק", "כפר בילו", "כפר בלום", "כפר בן נון", "כפר ברא", "כפר ברוך", "כפר גלים", "כפר גלעדי", "כפר דניאל", "כפר האורנים", "כפר החורש", "כפר המכבי", "כפר הנגיד", "כפר הנשיא", "כפר הס", "כפר הראה", "כפר הריף", "כפר וורבורג", "כפר ויתקין", "כפר זיתים", "כפר חבד", "כפר חוש", "כפר חיטים", "כפר חנניה", "כפר חרוב", "כפר טרומן", "כפר יאסיף", "כפר יהושע", "כפר יובל", "כפר יונה", "כפר יחזקאל", "כפר יעבץ", "כפר כמא", "כפר כנא", "כפר מונש", "כפר מימון", "כפר מלל", "כפר מנדא", "כפר מנחם", "כפר מסריק", "כפר מצר", "כפר נטר", "כפר סאלד", "כפר סבא", "כפר סילבר", "כפר סירקין", "כפר עבודה", "כפר עזה", "כפר עציון", "כפר פינס", "כפר קאסם", "כפר קיש", "כפר קרע", "כפר ראש הנקרה", "כפר רופין", "כפר רות", "כפר שמאי", "כפר שמריהו", "כפר תבור", "כפר תפוח", "כרכום", "כרם בן זמרה", "כרם בן שמן", "כרם מהרל", "כרם שלום", "כרמי יוסף", "כרמי צור", "כרמי קטיף", "כרמיאל", "כרמים", "כרמל", "לבון", "לביא", "לבנים", "להב", "להבות הבשן", "להבות חביבה", "לוד", "לוזית", "לוחמי הגטאות", "לוטם", "לוטן", "לימן", "לכיש", "לפיד", "לפידות", "לקיה", "מבוא ביתר", "מבוא דותן", "מבוא חורון", "מבוא חמה", "מבוא מודיעים", "מבואות ים", "מבטחים", "מבקיעים", "מגאר", "מגדים", "מגדל", "מגדל העמק", "מגדל עוז", "מגדל תפן", "מגידו", "מגל", "מגן", "מגן שאול", "מגשימים", "מדרך עוז", "מזור", "מזכרת בתיה", "מזרע", "מחולה", "מחניים", "מטולה", "מיטב", "מיכמן", "מיכמנת", "מירב", "מירון", "מישר", "מיתר", "מכורה", "מכמורת", "מכמש", "מלכיה", "מנחמיה", "מנרה", "מסד", "מסילות", "מסלול", "מסעדה", "מעגלים", "מעגן", "מעגן מיכאל", "מעון", "מעונה", "מעיין ברוך", "מעיין צבי", "מעלה אדומים", "מעלה אפרים", "מעלה גלבוע", "מעלה גמלא", "מעלה החמישה", "מעלה לבונה", "מעלה מכמש", "מעלה עירון", "מעלה עמוס", "מעלה שומרון", "מעלות-תרשיחא", "מעמר", "מענית", "מפלסים", "מצדות יהודה", "מצובה", "מצליח", "מצפה", "מצפה אביב", "מצפה אילן", "מצפה רמון", "מצפה שלם", "מקווה ישראל", "מרגליות", "מרום גולן", "מרחביה מושב", "מרחביה קיבוץ", "מרכז שפירא", "משגב עם", "משהד", "משואה", "משואות יצחק", "משכיות", "משמר איילון", "משמר דוד", "משמר הירדן", "משמר הנגב", "משמר העמק", "משמר השרון", "משמרות", "משמרת", "משען", "מתן", "מתת", "מתתיהו", "נאות גולן", "נאות הכיכר", "נאות מרדכי", "נאות סמדר", "נבטים", "נגבה", "נהורה", "נהלל", "נהריה", "נוב", "נוגה", "נווה אור", "נווה אטיב", "נווה אילן", "נווה אמיאל", "נווה דניאל", "נווה זוהר", "נווה זיו", "נווה חריף", "נווה ים", "נווה ירק", "נווה מבטח", "נווה מיכאל", "נווה מנחם", "נווה שלום", "נועם", "נוף הגליל", "נופים", "נופית", "נוקדים", "נורדיה", "נורית", "נחושה", "נחל עוז", "נחלה", "נחליאל", "נחם", "נחף", "נחשון", "נחשונים", "ניין", "ניר אליהו", "ניר בנים", "ניר גלים", "ניר דוד", "ניר חן", "ניר יפה", "ניר יצחק", "ניר ישראל", "ניר משה", "ניר עוז", "ניר עם", "ניר עקיבא", "ניר צבי", "נירים", "נירית", "נס הרים", "נס ציונה", "נצר חזני", "נצר סרני", "נצרת", "נצרת עילית", "נשר", "נתיב הגדוד", "נתיב הלה", "נתיב העשרה", "נתיבות", "נתניה", "סאסא", "סביון", "סגולה", "סומיל", "סחנין", "סלעית", "סנסנה", "סעד", "ספיר", "סתריה", "עגור", "עדי", "עדנה", "עוזה", "עולש", "עומר", "עופר", "עופרה", "עוצם", "עזריאל", "עזריה", "עזריקם", "עטרת", "עיילבון", "עיינות", "עכו", "עלומות", "עלי", "עלי זהב", "עליזה", "עלמה", "עלמון", "עמינדב", "עמיעד", "עמיעוז", "עמיר", "עמנואל", "עמקה", "עמר", "עמרם", "ענב", "עספיא", "עפולה", "עפרה", "עצמון שגב", "עראבה", "עראמשה", "ערד", "ערוגות", "ערערה", "ערערה בנגב", "עשרת", "עתלית", "עתניאל", "פארן", "פדואל", "פדויים", "פדיה", "פוריה עילית", "פטיש", "פלך", "פלמחים", "פני חבר", "פסגות", "פסוטה", "פצאל", "פקיעין", "פקיעין חדשה", "פרדס חנה-כרכור", "פרדסיה", "פרוד", "פרזון", "פריאל", "פתח תקווה", "פתחיה", "צאלים", "צביה", "צבעון", "צובה", "צוחר", "צופים", "צופית", "צופר", "צוקי ים", "צוקים", "צוריאל", "צורית", "ציפורי", "צלפון", "צנדלה", "צפריר", "צפרירים", "צפת", "צרופה", "צרעה", "קבוצת יבנה", "קדומים", "קדים", "קדמת צבי", "קדרון", "קדרים", "קוממיות", "קורנית", "קטורה", "קיסריה", "קלחים", "קליה", "קלנסווה", "קלע", "קציר", "קצרין", "קרית אונו", "קרית ארבע", "קרית אתא", "קרית ביאליק", "קרית גת", "קרית טבעון", "קרית ים", "קרית מוצקין", "קרית מלאכי", "קרית ענבים", "קרית שמונה", "קשת", "ראמה", "ראש העין", "ראש פינה", "ראש צורים", "ראשון לציון", "רבדים", "רביבים", "רגבה", "רהט", "רווחה", "רוחמה", "רועי", "רותם", "רחובות", "רחלים", "ריחאניה", "ריחן", "רימונים", "רינתיה", "רכסים", "רמות", "רמות השבים", "רמות מאיר", "רמות מנשה", "רמות נפתלי", "רמלה", "רמת גן", "רמת דוד", "רמת הכובש", "רמת השרון", "רמת יוחנן", "רמת ישי", "רמת מגשימים", "רמת צבי", "רמת רזיאל", "רמת רחל", "רמת שפר", "רנן", "רעים", "רעננה", "רקפת", "רשפון", "רשפים", "שאר ישוב", "שבי ציון", "שבי שומרון", "שגב-שלום", "שדה אילן", "שדה אליהו", "שדה אליעזר", "שדה בוקר", "שדה דוד", "שדה יואב", "שדה יעקב", "שדה יצחק", "שדה משה", "שדה נחום", "שדה נחמיה", "שדה עוזיהו", "שדה צבי", "שדות ים", "שדות מיכה", "שדי חמד", "שדמה", "שדמות דבורה", "שדמות מחולה", "שהם", "שובה", "שובל", "שוהם", "שומרה", "שורש", "שורשים", "שזור", "שחר", "שיבולים", "שיזף", "שילה", "שילת", "שימשית", "שיתים", "שכניה", "שלווה", "שלומי", "שלומית", "שמיר", "שמעה", "שמרת", "שני", "שניר", "שעב", "שעל", "שעלבים", "שפיר", "שפרעם", "שקד", "שקף", "שרונה", "שריד", "שרשרת", "שתולה", "שתולים", "תאשור", "תדהר", "תובל", "תומר", "תושיה", "תימורים", "תירוש", "תל אביב - יפו", "תל יוסף", "תל יצחק", "תל מונד", "תל עדשים", "תל קציר", "תל שבע", "תלמי אלעזר", "תלמי בילו", "תלמי יוסף", "תלמי יחיאל", "תלמי יפה", "תלמים", "תמרת", "תנובות", "תפרח", "תקומה", "תקוע", "תרום"];
-function filterYishuvim(q) {
-  const dd = document.getElementById("yishuv-dropdown");
-  const matches = q ? YISHUVIM.filter(y => y.indexOf(q) !== -1).slice(0,25) : YISHUVIM.slice(0,25);
-  if (!matches.length) { dd.style.display = "none"; return; }
-  dd.innerHTML = matches.map(y =>
-    "<div onclick=\"selectYishuv(this.textContent)\" style=\"padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)\" " +
-    "onmouseover=\"this.style.background=\'var(--surface2)'\" onmouseout=\"this.style.background=\''\">" + y + "</div>"
-  ).join("");
-  dd.style.display = "block";
-}
-function selectYishuv(y) {
-  document.getElementById("f-yishuv").value = y;
-  document.getElementById("yishuv-dropdown").style.display = "none";
-}
-</script>
-        <div class="form-group"><label class="form-label">ועדה מקומית</label><input class="form-input" type="text" id="f-vaada" placeholder="שם הועדה"></div>
-        <div class="form-group"><label class="form-label">גוש</label><input class="form-input" type="text" id="f-gush" placeholder="מספר גוש"></div>
-        <div class="form-group"><label class="form-label">חלקה</label><input class="form-input" type="text" id="f-helka" placeholder="מספר חלקה"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">סוג בקשה</label>
-        <select class="form-input" id="f-req-type">
-          <option value="">בחר...</option>
-          <option>היתר בנייה — מבנה חדש</option>
-          <option>היתר בנייה — תוספת/שינוי</option>
-          <option>שינוי ייעוד / שימוש חורג</option>
-          <option>אישור עקרוני</option>
-          <option>תכנית מפורטת</option>
-          <option>אחר</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">סוג מבנה מוצע</label>
-        <select class="form-input" id="f-bldg-type">
-          <option value="">בחר...</option>
-          <optgroup label="לולים — עופות">
-            <option>לול מטילות</option>
-            <option>לול פטם</option>
-            <option>לול הודים</option>
-            <option>בית אימון (עופות)</option>
-            <option>לול רביה</option>
-            <option>לול הסגר / יבוא</option>
-            <option>מדגירה</option>
-          </optgroup>
-          <optgroup label="בקר וצאן">
-            <option>מבנה / סככה לרפת</option>
-            <option>מבנה / סככה למפטמה</option>
-            <option>מבנה לצאן</option>
-          </optgroup>
-          <optgroup label="סוסים וחיות אחרות">
-            <option>אורווה</option>
-            <option>כלבייה</option>
-          </optgroup>
-          <optgroup label="מזון ואחסון">
-            <option>מרכז מזון מורכב</option>
-            <option>מרכז מזון פשוט</option>
-            <option>מחסן חקלאי</option>
-            <option>מחסן ציוד</option>
-          </optgroup>
-          <optgroup label="גידול צמחים">
-            <option>בית צמיחה (חממה)</option>
-            <option>בית אריזה</option>
-          </optgroup>
-          <optgroup label="דבוראות">
-            <option>מכון רדית דבש</option>
-          </optgroup>
-          <optgroup label="שונות">
-            <option>מגורים חקלאי</option>
-            <option>מתקן השקיה / מים</option>
-            <option>מבנה שירות</option>
-            <option>אחר</option>
-          </optgroup>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label">הערות המתכנן</label><textarea class="form-input" id="f-notes" rows="3" placeholder="הקשר מיוחד, נקודות לתשומת לב, שאלות..."></textarea></div>
+    <!-- API KEY BANNER -->
+    <div id="apikey-banner" style="display:none">
+      <span>🔑 <strong>Anthropic API Key נדרש:</strong></span>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+      <button onclick="saveKey()">שמור</button>
+      <span id="key-status" style="font-size:12px;color:var(--text3)">המפתח נשמר בזיכרון הדפדפן בלבד ואינו נשלח לשום שרת
+        מלבד api.anthropic.com</span>
     </div>
 
-    <div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">📎 העלאת מסמכים</span><span class="card-sub">PDF, תמונות, Word, גרמושקה, תוכנית</span></div>
-        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
-             ondragover="event.preventDefault();this.classList.add('drag')"
-             ondragleave="this.classList.remove('drag')"
-             ondrop="handleDrop(event)">
-          <div class="upload-zone-icon">⬆</div>
-          <div class="upload-zone-text">גרור קבצים לכאן או לחץ להעלאה</div>
-          <div class="upload-zone-sub">PDF • תמונות (JPG/PNG) • Word (.docx) • GeoTIFF</div>
-        </div>
-        <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.docx,.doc,.tif,.tiff" style="display:none" onchange="handleFiles(this.files)">
-        <div id="file-list" style="margin-top:12px"></div>
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <span class="topbar-logo">מנת"ח חקלאי</span>
+      <span class="topbar-sub">מערכת ניתוח תכנוני לחוות דעת חקלאית — משרד החקלאות וביטחון המזון</span>
+      <span class="topbar-badge">⚠ כלי פנימי בלבד — אינו מחליף שיקול דעת מקצועי</span>
+      <div style="margin-right:auto;display:flex;align-items:center;gap:8px">
+        <span id="topbar-case" style="font-size:12px;color:var(--text3)">אין תיק פעיל</span>
+        <div class="dot dot-gray" id="topbar-dot"></div>
+      </div>
+    </div>
 
-        <div style="margin-top:14px">
-          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">מסמכי ליבה נדרשים</div>
-          <div id="required-docs">
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">תוכנית מצב קיים</span><span class="check-status cs-pending">ממתין</span></div>
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">תוכנית מצב מוצע</span><span class="check-status cs-pending">ממתין</span></div>
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">גרמושקה / נסח טאבו</span><span class="check-status cs-pending">ממתין</span></div>
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">היתרים קיימים (אם יש)</span><span class="check-status cs-na">לא חובה</span></div>
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">חוות דעת אגרונום</span><span class="check-status cs-pending">ממתין</span></div>
-            <div class="check-item"><span class="check-num">◦</span><span class="check-label">אישורים משלימים</span><span class="check-status cs-na">לפי סוג</span></div>
+    <div class="main">
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="nav-section">ניהול תיק</div>
+        <div class="nav-item active" onclick="showSection('intake')" id="nav-intake">📂 קליטת תיק חדש</div>
+        <div class="nav-item" onclick="showSection('status')" id="nav-status">📋 סטטוס כללי</div>
+
+        <div class="nav-section">ניתוח</div>
+        <div class="nav-item" onclick="showSection('documents')" id="nav-documents">📄 מסמכים שנקלטו<span
+            class="nav-badge warn" id="badge-docs" style="display:none">!</span></div>
+        <div class="nav-item" onclick="showSection('threshold')" id="nav-threshold">🔒 בדיקת סף ויסוד</div>
+        <div class="nav-item" onclick="showSection('normative')" id="nav-normative">🗺 מפה נורמטיבית</div>
+        <div class="nav-item" onclick="showSection('analysis')" id="nav-analysis">🔍 ניתוח הבקשה</div>
+
+        <div class="nav-section">הכרעה</div>
+        <div class="nav-item" onclick="showSection('determinations')" id="nav-determinations">📌 כרטיסי קביעה</div>
+        <div class="nav-item" onclick="showSection('comparison')" id="nav-comparison">⚖️ מבוקש מול מותר</div>
+        <div class="nav-item" onclick="showSection('blockers')" id="nav-blockers">🚫 חסמים ודגלים<span class="nav-badge"
+            id="badge-blockers" style="display:none">0</span></div>
+        <div class="nav-item" onclick="showSection('opinion')" id="nav-opinion">📝 חוות דעת ראשונית</div>
+        <div class="nav-item" onclick="showSection('appendix')" id="nav-appendix">🗃 נספח עבודה פנימי</div>
+
+        <div style="margin:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px">מקורות חיצוניים</div>
+          <div class="source-item"><span class="source-name" style="font-size:12px">מידע תכנוני</span><span
+              class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
+          <div class="source-item"><span class="source-name" style="font-size:12px">GovMap API</span><span
+              class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
+          <div class="source-item"><span class="source-name" style="font-size:12px">XPlan</span><span
+              class="badge src-unavailable" style="font-size:10px">לא נגיש</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5">ⓘ מקורות חיצוניים אינם נגישים.
+            כל שדה תלוי-מקור מוחזר fail-closed.</div>
+        </div>
+
+        <div style="margin:0 16px 16px;padding-top:12px;border-top:1px solid var(--border)">
+          <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="resetAll()">🔄 תיק חדש</button>
+          <button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:6px"
+            onclick="window.print()">🖨 הדפס דוח</button>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT -->
+      <div class="content" id="main-content">
+
+        <!-- INTAKE -->
+        <div id="sec-intake">
+          <div class="section-title"><span class="section-num">1</span>קליטת תיק — מטא-דאטה ומסמכים</div>
+          <div class="alert alert-warn">
+            <span class="alert-icon">⚠</span>
+            <div><strong>מקורות חיצוניים לא נגישים:</strong> מידע תכנוני, GovMap ו-XPlan אינם נגישים. המערכת תנתח אך ורק
+              מסמכים שתעלה ידנית. כל שדה הדורש מקור חיצוני יסומן <strong>חסר/לא נגיש</strong> ויוחזר "נדרש בירור".</div>
+          </div>
+          <div class="grid-2" style="gap:16px;align-items:start">
+            <div class="card">
+              <div class="card-header"><span class="card-title">📋 פרטי התיק</span></div>
+              <div class="form-group"><label class="form-label">מספר תיק / מזהה בקשה</label><input class="form-input"
+                  type="text" id="f-case" placeholder="לדוג׳ 2025-YYYY-001"></div>
+              <div class="grid-2" style="gap:8px">
+                <div class="form-group" style="position:relative">
+                  <label class="form-label">ישוב*</label>
+                  <input class="form-input" type="text" id="f-yishuv" placeholder="הקלד לחיפוש ישוב..."
+                    autocomplete="off" oninput="filterYishuvim(this.value)" onfocus="filterYishuvim(this.value)"
+                    onblur="setTimeout(()=>{document.getElementById('yishuv-dropdown').style.display='none'},200)">
+                  <div id="yishuv-dropdown"
+                    style="display:none;position:absolute;top:100%;right:0;left:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius);max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                  </div>
+                </div>
+                <script>
+                  const YISHUVIM = ["אבו גוש", "אבו סנאן", "אבו קרינאת", "אבטין", "אביאל", "אביגדור", "אביחיל", "אביטל", "אבירים", "אבן מנחם", "אבן ספיר", "אבן שמואל", "אבנת", "אודים", "אודם", "אוחד", "אופקים", "אור הגנוז", "אור הנר", "אור יהודה", "אור עקיבא", "אורה", "אורות", "אורים", "אורנים", "אורנית", "אושה", "אזור", "אחווה", "אחוזם", "אחוזת ברק", "אחיהוד", "אחיטוב", "אחיסמך", "אחיעזר", "איבים", "איילון", "איילת השחר", "אילון", "אילות", "אילניה", "אכסאל", "אל-בטוף", "אלומה", "אלומות", "אלון הגליל", "אלון מורה", "אלון שבות", "אלוני אבא", "אלוני הבשן", "אלוני יצחק", "אלונים", "אלי-עד", "אליאב", "אליכין", "אלישיב", "אלישמע", "אלמגור", "אלמוג", "אלעד", "אלעזר", "אלפי מנשה", "אלקוש", "אלקנה", "אמירים", "אמציה", "אניעם", "אספר", "אעבלין", "אפיק", "אפיקים", "אפק", "אפרת", "ארבל", "ארגמן", "ארז", "אשבול", "אשדוד", "אשדות יעקב איחוד", "אשדות יעקב מאוחד", "אשוח", "אשחר", "אשכולות", "אשל הנשיא", "אשלים", "אשקלון", "אשרת", "אשתאול", "באקה אל-גרביה", "באר גנים", "באר טוביה", "באר יעקב", "באר מילכה", "באר שבע", "בארות יצחק", "בארותיים", "בארי", "בוסתן הגליל", "בועיינה נוגידאת", "בוקעתא", "בור שחורה", "ביצרון", "ביר אל-מכסור", "בירייה", "בית אורן", "בית אל", "בית אלעזרי", "בית אלפא", "בית אריה", "בית ברל", "בית גוברין", "בית גן", "בית דגן", "בית הגדי", "בית הלוי", "בית הלל", "בית העמק", "בית הערבה", "בית זיד", "בית זית", "בית זרע", "בית חגי", "בית חורון", "בית חירות", "בית חלקיה", "בית חנן", "בית חנניה", "בית חשמונאי", "בית יהושע", "בית יוסף", "בית ינאי", "בית יצחק-שער חפר", "בית כנף", "בית לחם הגלילית", "בית מאיר", "בית נחמיה", "בית ניר", "בית נקופה", "בית עובד", "בית עוזיאל", "בית עזרא", "בית עין", "בית עריף", "בית קמה", "בית קשת", "בית רבן", "בית רימון", "בית שאן", "בית שמש", "בית שערים", "בית שקמה", "ביתן אהרן", "ביתר עילית", "בן זכאי", "בן עמי", "בן שמן", "בני ברק", "בני דרום", "בני דרר", "בני יהודה", "בני עטרות", "בני עיש", "בנימינה-גבעת עדה", "בסמה", "בסמת טבעון", "בענה", "בצרה", "בצת", "בקוע", "בקעות", "בר גיורא", "בר יוחאי", "ברוכין", "ברור חיל", "ברכה", "ברכיה", "ברעם", "ברקאי", "ברקן", "ברקת", "בת הדר", "בת חן", "בת חפר", "בת ים", "בת עין", "בת שלמה", "גאולה", "גאולי תימן", "גאליה", "גבולות", "גבים", "גבע", "גבע בנימין", "גבע כרמל", "גבעון החדשה", "גבעות בר", "גבעת אבני", "גבעת ברנר", "גבעת השלושה", "גבעת יואב", "גבעת יערים", "גבעת נילי", "גבעת עוז", "גבעת שמואל", "גבעת שפירא", "גבעתי", "גבעתיים", "גברעם", "גדות", "גדיש", "גדעונה", "גולן", "גונן", "גורן", "גורנות הגליל", "גזית", "גזר", "גיאה", "גיבתון", "גיזו", "גיל עם", "גילון", "גילת", "גינוסר", "גיניגר", "גינתון", "גלאון", "גלגל", "גליל ים", "גמזו", "גן הדרום", "גן השומרון", "גן חיים", "גן יאשיה", "גן יבנה", "גן נר", "גן שורק", "גן שלמה", "גן שמואל", "גנות", "גנות הדר", "גני טל", "גני יוחנן", "גני מודיעין", "גני תקווה", "גנר", "געש", "גפן", "גרופית", "גשר", "גשר הזיו", "גשרון", "גת", "גת רימון", "דבורה", "דבוריה", "דברת", "דגניה א", "דגניה ב", "דובב", "דור", "דורות", "דחי", "דייר חנא", "דימונה", "דיר אל-אסד", "דיר חנא", "דישון", "דלייה", "דלתון", "דן", "דפנה", "דקל", "האון", "הבונים", "הגושרים", "הוד השרון", "הושעיה", "הזורע", "הזורעים", "החותרים", "הילה", "הכפר הירוק", "המעפיל", "הסוללים", "העוגן", "הר אדר", "הר גילה", "הר עמשא", "הראל", "הרדוף", "הרצליה", "הררית", "זוהר", "זיקים", "זיתן", "זכרון יעקב", "זמר", "זנוח", "זרועה", "זרזיר", "חבצלת השרון", "חגור", "חגי", "חגלה", "חד-נס", "חדיד", "חדרה", "חולדה", "חולון", "חולית", "חולתה", "חוסן", "חוסנייה", "חופית", "חוקוק", "חורה", "חורפיש", "חורשים", "חיבת ציון", "חיפה", "חירות", "חכליל", "חלוץ", "חלמיש", "חמד", "חמדיה", "חמדת", "חמרה", "חמת גדר", "חניאל", "חניתה", "חנתון", "חספין", "חפץ חיים", "חצב", "חצבה", "חצור הגלילית", "חצור-אשדוד", "חצרים", "חרב לאת", "חרוצים", "חריש", "חרמש", "חרשים", "חשמונאים", "טבריה", "טובא-זנגריה", "טורעאן", "טייבה", "טייבה בעמק", "טירה", "טירת יהודה", "טירת כרמל", "טירת צבי", "טל מנשה", "טל שחר", "טללים", "טלמון", "טמרה", "טמרה יזרעאל", "יבול", "יבנאל", "יבנה", "יגור", "יגל", "יד בנימין", "יד חנה", "יד מרדכי", "יד נתן", "יד רמבם", "ידידה", "יהוד-מונוסון", "יהל", "יובל", "יובלים", "יודפת", "יונתן", "יושיביה", "יזרעאל", "יחיעם", "יכיני", "ינוח-גת", "ינון", "יסוד המעלה", "יסודות", "יספיף", "יעד", "יעל", "יערה", "יפיע", "יפית", "יפעת", "יפרח", "יצהר", "יציץ", "יקום", "יקיר", "יקנעם עילית", "ירדנה", "ירוחם", "ירושלים", "ירחיב", "ירכא", "ירקונה", "ישע", "ישרש", "יתד", "כאבול", "כאוכב אבו אל-היג", "כברי", "כדורי", "כוכב השחר", "כוכב יאיר", "כוכב מיכאל", "כורזים", "כחל", "כינרות", "כיסופים", "כישור", "כלנית", "כמאנה", "כנות", "כנף", "כנרת מושבה", "כנרת קבוצה", "כסיפה", "כסלון", "כסרא-סמיע", "כעביה-טבאש", "כפר אדומים", "כפר אוריה", "כפר אחים", "כפר ביאליק", "כפר בילו", "כפר בלום", "כפר בן נון", "כפר ברא", "כפר ברוך", "כפר גלים", "כפר גלעדי", "כפר דניאל", "כפר האורנים", "כפר החורש", "כפר המכבי", "כפר הנגיד", "כפר הנשיא", "כפר הס", "כפר הראה", "כפר הריף", "כפר וורבורג", "כפר ויתקין", "כפר זיתים", "כפר חבד", "כפר חוש", "כפר חיטים", "כפר חנניה", "כפר חרוב", "כפר טרומן", "כפר יאסיף", "כפר יהושע", "כפר יובל", "כפר יונה", "כפר יחזקאל", "כפר יעבץ", "כפר כמא", "כפר כנא", "כפר מונש", "כפר מימון", "כפר מלל", "כפר מנדא", "כפר מנחם", "כפר מסריק", "כפר מצר", "כפר נטר", "כפר סאלד", "כפר סבא", "כפר סילבר", "כפר סירקין", "כפר עבודה", "כפר עזה", "כפר עציון", "כפר פינס", "כפר קאסם", "כפר קיש", "כפר קרע", "כפר ראש הנקרה", "כפר רופין", "כפר רות", "כפר שמאי", "כפר שמריהו", "כפר תבור", "כפר תפוח", "כרכום", "כרם בן זמרה", "כרם בן שמן", "כרם מהרל", "כרם שלום", "כרמי יוסף", "כרמי צור", "כרמי קטיף", "כרמיאל", "כרמים", "כרמל", "לבון", "לביא", "לבנים", "להב", "להבות הבשן", "להבות חביבה", "לוד", "לוזית", "לוחמי הגטאות", "לוטם", "לוטן", "לימן", "לכיש", "לפיד", "לפידות", "לקיה", "מבוא ביתר", "מבוא דותן", "מבוא חורון", "מבוא חמה", "מבוא מודיעים", "מבואות ים", "מבטחים", "מבקיעים", "מגאר", "מגדים", "מגדל", "מגדל העמק", "מגדל עוז", "מגדל תפן", "מגידו", "מגל", "מגן", "מגן שאול", "מגשימים", "מדרך עוז", "מזור", "מזכרת בתיה", "מזרע", "מחולה", "מחניים", "מטולה", "מיטב", "מיכמן", "מיכמנת", "מירב", "מירון", "מישר", "מיתר", "מכורה", "מכמורת", "מכמש", "מלכיה", "מנחמיה", "מנרה", "מסד", "מסילות", "מסלול", "מסעדה", "מעגלים", "מעגן", "מעגן מיכאל", "מעון", "מעונה", "מעיין ברוך", "מעיין צבי", "מעלה אדומים", "מעלה אפרים", "מעלה גלבוע", "מעלה גמלא", "מעלה החמישה", "מעלה לבונה", "מעלה מכמש", "מעלה עירון", "מעלה עמוס", "מעלה שומרון", "מעלות-תרשיחא", "מעמר", "מענית", "מפלסים", "מצדות יהודה", "מצובה", "מצליח", "מצפה", "מצפה אביב", "מצפה אילן", "מצפה רמון", "מצפה שלם", "מקווה ישראל", "מרגליות", "מרום גולן", "מרחביה מושב", "מרחביה קיבוץ", "מרכז שפירא", "משגב עם", "משהד", "משואה", "משואות יצחק", "משכיות", "משמר איילון", "משמר דוד", "משמר הירדן", "משמר הנגב", "משמר העמק", "משמר השרון", "משמרות", "משמרת", "משען", "מתן", "מתת", "מתתיהו", "נאות גולן", "נאות הכיכר", "נאות מרדכי", "נאות סמדר", "נבטים", "נגבה", "נהורה", "נהלל", "נהריה", "נוב", "נוגה", "נווה אור", "נווה אטיב", "נווה אילן", "נווה אמיאל", "נווה דניאל", "נווה זוהר", "נווה זיו", "נווה חריף", "נווה ים", "נווה ירק", "נווה מבטח", "נווה מיכאל", "נווה מנחם", "נווה שלום", "נועם", "נוף הגליל", "נופים", "נופית", "נוקדים", "נורדיה", "נורית", "נחושה", "נחל עוז", "נחלה", "נחליאל", "נחם", "נחף", "נחשון", "נחשונים", "ניין", "ניר אליהו", "ניר בנים", "ניר גלים", "ניר דוד", "ניר חן", "ניר יפה", "ניר יצחק", "ניר ישראל", "ניר משה", "ניר עוז", "ניר עם", "ניר עקיבא", "ניר צבי", "נירים", "נירית", "נס הרים", "נס ציונה", "נצר חזני", "נצר סרני", "נצרת", "נצרת עילית", "נשר", "נתיב הגדוד", "נתיב הלה", "נתיב העשרה", "נתיבות", "נתניה", "סאסא", "סביון", "סגולה", "סומיל", "סחנין", "סלעית", "סנסנה", "סעד", "ספיר", "סתריה", "עגור", "עדי", "עדנה", "עוזה", "עולש", "עומר", "עופר", "עופרה", "עוצם", "עזריאל", "עזריה", "עזריקם", "עטרת", "עיילבון", "עיינות", "עכו", "עלומות", "עלי", "עלי זהב", "עליזה", "עלמה", "עלמון", "עמינדב", "עמיעד", "עמיעוז", "עמיר", "עמנואל", "עמקה", "עמר", "עמרם", "ענב", "עספיא", "עפולה", "עפרה", "עצמון שגב", "עראבה", "עראמשה", "ערד", "ערוגות", "ערערה", "ערערה בנגב", "עשרת", "עתלית", "עתניאל", "פארן", "פדואל", "פדויים", "פדיה", "פוריה עילית", "פטיש", "פלך", "פלמחים", "פני חבר", "פסגות", "פסוטה", "פצאל", "פקיעין", "פקיעין חדשה", "פרדס חנה-כרכור", "פרדסיה", "פרוד", "פרזון", "פריאל", "פתח תקווה", "פתחיה", "צאלים", "צביה", "צבעון", "צובה", "צוחר", "צופים", "צופית", "צופר", "צוקי ים", "צוקים", "צוריאל", "צורית", "ציפורי", "צלפון", "צנדלה", "צפריר", "צפרירים", "צפת", "צרופה", "צרעה", "קבוצת יבנה", "קדומים", "קדים", "קדמת צבי", "קדרון", "קדרים", "קוממיות", "קורנית", "קטורה", "קיסריה", "קלחים", "קליה", "קלנסווה", "קלע", "קציר", "קצרין", "קרית אונו", "קרית ארבע", "קרית אתא", "קרית ביאליק", "קרית גת", "קרית טבעון", "קרית ים", "קרית מוצקין", "קרית מלאכי", "קרית ענבים", "קרית שמונה", "קשת", "ראמה", "ראש העין", "ראש פינה", "ראש צורים", "ראשון לציון", "רבדים", "רביבים", "רגבה", "רהט", "רווחה", "רוחמה", "רועי", "רותם", "רחובות", "רחלים", "ריחאניה", "ריחן", "רימונים", "רינתיה", "רכסים", "רמות", "רמות השבים", "רמות מאיר", "רמות מנשה", "רמות נפתלי", "רמלה", "רמת גן", "רמת דוד", "רמת הכובש", "רמת השרון", "רמת יוחנן", "רמת ישי", "רמת מגשימים", "רמת צבי", "רמת רזיאל", "רמת רחל", "רמת שפר", "רנן", "רעים", "רעננה", "רקפת", "רשפון", "רשפים", "שאר ישוב", "שבי ציון", "שבי שומרון", "שגב-שלום", "שדה אילן", "שדה אליהו", "שדה אליעזר", "שדה בוקר", "שדה דוד", "שדה יואב", "שדה יעקב", "שדה יצחק", "שדה משה", "שדה נחום", "שדה נחמיה", "שדה עוזיהו", "שדה צבי", "שדות ים", "שדות מיכה", "שדי חמד", "שדמה", "שדמות דבורה", "שדמות מחולה", "שהם", "שובה", "שובל", "שוהם", "שומרה", "שורש", "שורשים", "שזור", "שחר", "שיבולים", "שיזף", "שילה", "שילת", "שימשית", "שיתים", "שכניה", "שלווה", "שלומי", "שלומית", "שמיר", "שמעה", "שמרת", "שני", "שניר", "שעב", "שעל", "שעלבים", "שפיר", "שפרעם", "שקד", "שקף", "שרונה", "שריד", "שרשרת", "שתולה", "שתולים", "תאשור", "תדהר", "תובל", "תומר", "תושיה", "תימורים", "תירוש", "תל אביב - יפו", "תל יוסף", "תל יצחק", "תל מונד", "תל עדשים", "תל קציר", "תל שבע", "תלמי אלעזר", "תלמי בילו", "תלמי יוסף", "תלמי יחיאל", "תלמי יפה", "תלמים", "תמרת", "תנובות", "תפרח", "תקומה", "תקוע", "תרום"];
+                  function filterYishuvim(q) {
+                    const dd = document.getElementById("yishuv-dropdown");
+                    const matches = q ? YISHUVIM.filter(y => y.indexOf(q) !== -1).slice(0, 25) : YISHUVIM.slice(0, 25);
+                    if (!matches.length) { dd.style.display = "none"; return; }
+                    dd.innerHTML = matches.map(y =>
+                      "<div onclick=\"selectYishuv(this.textContent)\" style=\"padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)\" " +
+                      "onmouseover=\"this.style.background=\'var(--surface2)'\" onmouseout=\"this.style.background=\''\">" + y + "</div>"
+                    ).join("");
+                    dd.style.display = "block";
+                  }
+                  function selectYishuv(y) {
+                    document.getElementById("f-yishuv").value = y;
+                    document.getElementById("yishuv-dropdown").style.display = "none";
+                  }
+                </script>
+                <div class="form-group"><label class="form-label">ועדה מקומית</label><input class="form-input"
+                    type="text" id="f-vaada" placeholder="שם הועדה"></div>
+                <div class="form-group"><label class="form-label">גוש*</label><input class="form-input" type="text"
+                    id="f-gush" placeholder="מספר גוש"></div>
+                <div class="form-group"><label class="form-label">חלקה*</label><input class="form-input" type="text"
+                    id="f-helka" placeholder="מספר חלקה"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">סוג בקשה</label>
+                <select class="form-input" id="f-req-type">
+                  <option value="">בחר...</option>
+                  <option>היתר בנייה — מבנה חדש</option>
+                  <option>היתר בנייה — תוספת/שינוי</option>
+                  <option>שינוי ייעוד / שימוש חורג</option>
+                  <option>אישור עקרוני</option>
+                  <option>תכנית מפורטת</option>
+                  <option>אחר</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">סוג מבנה מוצע</label>
+                <select class="form-input" id="f-bldg-type">
+                  <option value="">בחר...</option>
+                  <optgroup label="לולים — עופות">
+                    <option>לול מטילות</option>
+                    <option>לול פטם</option>
+                    <option>לול הודים</option>
+                    <option>בית אימון (עופות)</option>
+                    <option>לול רביה</option>
+                    <option>לול הסגר / יבוא</option>
+                    <option>מדגירה</option>
+                  </optgroup>
+                  <optgroup label="בקר וצאן">
+                    <option>מבנה / סככה לרפת</option>
+                    <option>מבנה / סככה למפטמה</option>
+                    <option>מבנה לצאן</option>
+                  </optgroup>
+                  <optgroup label="סוסים וחיות אחרות">
+                    <option>אורווה</option>
+                    <option>כלבייה</option>
+                  </optgroup>
+                  <optgroup label="מזון ואחסון">
+                    <option>מרכז מזון מורכב</option>
+                    <option>מרכז מזון פשוט</option>
+                    <option>מחסן חקלאי</option>
+                    <option>מחסן ציוד</option>
+                  </optgroup>
+                  <optgroup label="גידול צמחים">
+                    <option>בית צמיחה (חממה)</option>
+                    <option>בית אריזה</option>
+                  </optgroup>
+                  <optgroup label="דבוראות">
+                    <option>מכון רדית דבש</option>
+                  </optgroup>
+                  <optgroup label="שונות">
+                    <option>מגורים חקלאי</option>
+                    <option>מתקן השקיה / מים</option>
+                    <option>מבנה שירות</option>
+                    <option>אחר</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">הערות המתכנן</label><textarea class="form-input"
+                  id="f-notes" rows="3" placeholder="הקשר מיוחד, נקודות לתשומת לב, שאלות..."></textarea></div>
+            </div>
+
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">📎 העלאת מסמכים</span><span class="card-sub">PDF,
+                    תמונות, Word, גרמושקה, תוכנית</span></div>
+                <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+                  ondragover="event.preventDefault();this.classList.add('drag')"
+                  ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+                  <div class="upload-zone-icon">⬆</div>
+                  <div class="upload-zone-text">גרור קבצים לכאן או לחץ להעלאה</div>
+                  <div class="upload-zone-sub">PDF • תמונות (JPG/PNG) • Word (.docx) • GeoTIFF</div>
+                </div>
+                <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.docx,.doc,.tif,.tiff"
+                  style="display:none" onchange="handleFiles(this.files)">
+                <div id="file-list" style="margin-top:12px"></div>
+
+                <div style="margin-top:14px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">מסמכי ליבה נדרשים
+                  </div>
+                  <div id="required-docs">
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">תוכנית מצב
+                        קיים</span><span class="check-status cs-pending">ממתין</span></div>
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">תוכנית מצב
+                        מוצע</span><span class="check-status cs-pending">ממתין</span></div>
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">גרמושקה / נסח
+                        טאבו</span><span class="check-status cs-pending">ממתין</span></div>
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">היתרים קיימים (אם
+                        יש)</span><span class="check-status cs-na">לא חובה</span></div>
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">חוות דעת
+                        אגרונום</span><span class="check-status cs-pending">ממתין</span></div>
+                    <div class="check-item"><span class="check-num">◦</span><span class="check-label">אישורים
+                        משלימים</span><span class="check-status cs-na">לפי סוג</span></div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:12px"
+                onclick="startAnalysis()" id="btn-analyze">
+                ▶ הרץ ניתוח מלא
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:12px" onclick="startAnalysis()" id="btn-analyze">
-        ▶ הרץ ניתוח מלא
-      </button>
+
+        <!-- STATUS -->
+        <div id="sec-status" style="display:none">
+          <div class="section-title"><span class="section-num">1</span>פרטי תיק וסטטוס כללי</div>
+          <div id="status-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- DOCUMENTS -->
+        <div id="sec-documents" style="display:none">
+          <div class="section-title"><span class="section-num">2</span>מסמכים שנקלטו ומסמכים חסרים</div>
+          <div id="docs-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- THRESHOLD -->
+        <div id="sec-threshold" style="display:none">
+          <div class="section-title"><span class="section-num">3</span>בדיקת סף ותנאי יסוד</div>
+          <div id="thresh-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- NORMATIVE -->
+        <div id="sec-normative" style="display:none">
+          <div class="section-title"><span class="section-num">4</span>מפת תחולה נורמטיבית</div>
+          <div id="norm-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- ANALYSIS -->
+        <div id="sec-analysis" style="display:none">
+          <div class="section-title"><span class="section-num">5</span>ניתוח הבקשה לפי סוג המבנה</div>
+          <div id="analysis-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- DETERMINATIONS -->
+        <div id="sec-determinations" style="display:none">
+          <div class="section-title"><span class="section-num">6</span>כרטיסי קביעה מנומקים</div>
+          <div id="det-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- COMPARISON -->
+        <div id="sec-comparison" style="display:none">
+          <div class="section-title"><span class="section-num">7</span>מבוקש מול מותר / מומלץ / נדרש</div>
+          <div id="comp-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- BLOCKERS -->
+        <div id="sec-blockers" style="display:none">
+          <div class="section-title"><span class="section-num">8</span>חסמים, תנאים ודגלים אדומים</div>
+          <div id="blockers-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- OPINION -->
+        <div id="sec-opinion" style="display:none">
+          <div class="section-title"><span class="section-num">8</span>חוות דעת ראשונית פנימית</div>
+          <div id="opinion-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+        <!-- APPENDIX -->
+        <div id="sec-appendix" style="display:none">
+          <div class="section-title"><span class="section-num">9</span>נספח עבודה פנימי</div>
+          <div id="appendix-content">
+            <div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loading" style="display:none">
+      <div class="big-spinner"></div>
+      <div class="loading-title" id="loading-title">מנתח תיק...</div>
+      <div class="loading-sub" id="loading-sub">מכין קבצים</div>
+      <div class="loading-steps" id="loading-steps"></div>
     </div>
-  </div>
-</div>
 
-<!-- STATUS -->
-<div id="sec-status" style="display:none">
-  <div class="section-title"><span class="section-num">1</span>פרטי תיק וסטטוס כללי</div>
-  <div id="status-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+  </div><!-- /app -->
 
-<!-- DOCUMENTS -->
-<div id="sec-documents" style="display:none">
-  <div class="section-title"><span class="section-num">2</span>מסמכים שנקלטו ומסמכים חסרים</div>
-  <div id="docs-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+  <script>
+    // ─────────────────────────────────────────────
+    //  STATE
+    // ─────────────────────────────────────────────
+    let state = { files: [], metadata: {}, analysisResult: null, apiKey: '' };
 
-<!-- THRESHOLD -->
-<div id="sec-threshold" style="display:none">
-  <div class="section-title"><span class="section-num">3</span>בדיקת סף ותנאי יסוד</div>
-  <div id="thresh-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+    // ─────────────────────────────────────────────
+    //  API KEY
+    // ─────────────────────────────────────────────
+    function saveKey() {
+      const k = document.getElementById('api-key-input').value.trim();
+      if (!k.startsWith('sk-')) { alert('נא להזין מפתח תקין (מתחיל ב-sk-)'); return; }
+      state.apiKey = k;
+      document.getElementById('key-status').innerHTML = '<span style="color:var(--green);font-weight:600">✓ מפתח נשמר בזיכרון</span>';
+      document.getElementById('api-key-input').value = '••••••••••••••••';
+    }
 
-<!-- NORMATIVE -->
-<div id="sec-normative" style="display:none">
-  <div class="section-title"><span class="section-num">4</span>מפת תחולה נורמטיבית</div>
-  <div id="norm-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+    // ─────────────────────────────────────────────
+    //  NAVIGATION
+    // ─────────────────────────────────────────────
+    const SECTIONS = ['intake', 'status', 'documents', 'threshold', 'normative', 'analysis', 'determinations', 'comparison', 'blockers', 'opinion', 'appendix'];
 
-<!-- ANALYSIS -->
-<div id="sec-analysis" style="display:none">
-  <div class="section-title"><span class="section-num">5</span>ניתוח הבקשה לפי סוג המבנה</div>
-  <div id="analysis-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+    function showSection(name) {
+      SECTIONS.forEach(s => {
+        document.getElementById('sec-' + s).style.display = s === name ? '' : 'none';
+        const n = document.getElementById('nav-' + s);
+        if (n) n.classList.toggle('active', s === name);
+      });
+    }
 
-<!-- DETERMINATIONS -->
-<div id="sec-determinations" style="display:none">
-  <div class="section-title"><span class="section-num">6</span>כרטיסי קביעה מנומקים</div>
-  <div id="det-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+    // ─────────────────────────────────────────────
+    //  FILE HANDLING
+    // ─────────────────────────────────────────────
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('upload-zone').classList.remove('drag');
+      handleFiles(e.dataTransfer.files);
+    }
 
-<!-- COMPARISON -->
-<div id="sec-comparison" style="display:none">
-  <div class="section-title"><span class="section-num">7</span>מבוקש מול מותר / מומלץ / נדרש</div>
-  <div id="comp-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
+    function handleFiles(fileList) {
+      for (const f of fileList) {
+        if (state.files.find(x => x.name === f.name && x.size === f.size)) continue;
+        state.files.push({ file: f, name: f.name, size: f.size, type: f.type, status: 'uploaded', base64: null, text: null });
+      }
+      renderFileList();
+    }
 
-<!-- BLOCKERS -->
-<div id="sec-blockers" style="display:none">
-  <div class="section-title"><span class="section-num">8</span>חסמים, תנאים ודגלים אדומים</div>
-  <div id="blockers-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
-
-<!-- OPINION -->
-<div id="sec-opinion" style="display:none">
-  <div class="section-title"><span class="section-num">8</span>חוות דעת ראשונית פנימית</div>
-  <div id="opinion-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
-
-<!-- APPENDIX -->
-<div id="sec-appendix" style="display:none">
-  <div class="section-title"><span class="section-num">9</span>נספח עבודה פנימי</div>
-  <div id="appendix-content"><div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div></div>
-</div>
-
-</div><!-- /content -->
-</div><!-- /main -->
-
-<!-- Loading overlay -->
-<div class="loading-overlay" id="loading" style="display:none">
-  <div class="big-spinner"></div>
-  <div class="loading-title" id="loading-title">מנתח תיק...</div>
-  <div class="loading-sub" id="loading-sub">מכין קבצים</div>
-  <div class="loading-steps" id="loading-steps"></div>
-</div>
-
-</div><!-- /app -->
-
-<script>
-// ─────────────────────────────────────────────
-//  STATE
-// ─────────────────────────────────────────────
-let state = { files:[], metadata:{}, analysisResult:null, apiKey:'' };
-
-// ─────────────────────────────────────────────
-//  API KEY
-// ─────────────────────────────────────────────
-function saveKey() {
-  const k = document.getElementById('api-key-input').value.trim();
-  if(!k.startsWith('sk-')) { alert('נא להזין מפתח תקין (מתחיל ב-sk-)'); return; }
-  state.apiKey = k;
-  document.getElementById('key-status').innerHTML = '<span style="color:var(--green);font-weight:600">✓ מפתח נשמר בזיכרון</span>';
-  document.getElementById('api-key-input').value = '••••••••••••••••';
-}
-
-// ─────────────────────────────────────────────
-//  NAVIGATION
-// ─────────────────────────────────────────────
-const SECTIONS = ['intake','status','documents','threshold','normative','analysis','determinations','comparison','blockers','opinion','appendix'];
-
-function showSection(name) {
-  SECTIONS.forEach(s => {
-    document.getElementById('sec-'+s).style.display = s===name ? '' : 'none';
-    const n = document.getElementById('nav-'+s);
-    if(n) n.classList.toggle('active', s===name);
-  });
-}
-
-// ─────────────────────────────────────────────
-//  FILE HANDLING
-// ─────────────────────────────────────────────
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.remove('drag');
-  handleFiles(e.dataTransfer.files);
-}
-
-function handleFiles(fileList) {
-  for(const f of fileList) {
-    if(state.files.find(x=>x.name===f.name && x.size===f.size)) continue;
-    state.files.push({file:f, name:f.name, size:f.size, type:f.type, status:'uploaded', base64:null, text:null});
-  }
-  renderFileList();
-}
-
-function renderFileList() {
-  const el = document.getElementById('file-list');
-  if(!state.files.length){ el.innerHTML=''; return; }
-  el.innerHTML = state.files.map((f,i)=>`
+    function renderFileList() {
+      const el = document.getElementById('file-list');
+      if (!state.files.length) { el.innerHTML = ''; return; }
+      el.innerHTML = state.files.map((f, i) => `
     <div class="file-item" id="fi-${i}">
       <div class="file-icon ${iconClass(f.name)}">${iconLabel(f.name)}</div>
       <div style="flex:1;min-width:0">
@@ -516,132 +1315,133 @@ function renderFileList() {
       <span class="file-status st-${f.status}" id="fst-${i}">${stLabel(f.status)}</span>
       <button onclick="removeFile(${i})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0 4px">✕</button>
     </div>`).join('');
-}
-
-function removeFile(i){ state.files.splice(i,1); renderFileList(); }
-function iconClass(n){ const e=ext(n); if(e==='pdf') return 'file-icon-pdf'; if(['jpg','jpeg','png','tif','tiff'].includes(e)) return 'file-icon-img'; return 'file-icon-doc'; }
-function iconLabel(n){ const e=ext(n); if(e==='pdf') return 'PDF'; if(['jpg','jpeg'].includes(e)) return 'JPG'; if(e==='png') return 'PNG'; if(['tif','tiff'].includes(e)) return 'TIF'; return 'DOC'; }
-function ext(n){ return n.split('.').pop().toLowerCase(); }
-function fmtSize(b){ if(b<1024) return b+'B'; if(b<1048576) return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
-function stLabel(s){ return {uploaded:'נקלט',parsed:'נותח',ocr:'OCR',failed:'שגיאה',analyzing:'מנתח...'}[s]||s; }
-
-function updateFileStatus(i,s){
-  state.files[i].status=s;
-  const el=document.getElementById('fst-'+i);
-  if(el){ el.className='file-status st-'+s; el.textContent=stLabel(s); }
-}
-
-// ─────────────────────────────────────────────
-//  FILE READING
-// ─────────────────────────────────────────────
-function readBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
-function readText(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsText(file,'UTF-8'); }); }
-
-// ─────────────────────────────────────────────
-//  ANALYSIS FLOW
-// ─────────────────────────────────────────────
-async function startAnalysis() {
-  const meta = collectMeta();
-  
-  if(!meta.caseId && !meta.yishuv && !meta.gush){ alert('נא למלא לפחות מזהה תיק, יישוב וגוש.'); return; }
-  if(!state.files.length){ alert('נא להעלות לפחות מסמך אחד לניתוח.'); return; }
-
-  state.metadata = meta;
-  setLoading(true,'קורא מסמכים...','שלב 1 — טעינת קבצים');
-
-  for(let i=0;i<state.files.length;i++){
-    const f=state.files[i];
-    updateFileStatus(i,'analyzing');
-    try {
-      const e=ext(f.name);
-      if(['pdf','jpg','jpeg','png'].includes(e)){
-        f.base64=await readBase64(f.file);
-        f.mediaType=e==='pdf'?'application/pdf':e==='jpg'||e==='jpeg'?'image/jpeg':'image/png';
-        f.status='parsed';
-      } else if(['tif','tiff'].includes(e)){
-        f.base64=await readBase64(f.file);
-        f.mediaType='image/tiff';
-        f.status='ocr'; // tiff cannot be sent directly, mark as OCR-needed
-      } else {
-        f.text=await readText(f.file);
-        f.status='parsed';
-      }
-    } catch(err){ f.status='failed'; }
-    updateFileStatus(i,f.status);
-  }
-
-  setLoading(true,'שולח לניתוח AI...','שלב 2 — חילוץ מידע ממסמכים','שלב 3 יתחיל בעוד כמה שניות...');
-
-  try {
-    const result = await runAnalysis();
-    state.analysisResult = result;
-    setLoading(false);
-    renderAll(result);
-    showSection('status');
-    document.getElementById('topbar-case').textContent = meta.caseId||(meta.yishuv+(meta.gush?' גוש '+meta.gush:''));
-    document.getElementById('topbar-dot').className='dot dot-blue';
-  } catch(e){
-    setLoading(false);
-    alert('שגיאה בניתוח: '+e.message+'\n\nוודא שה-API Key תקין ושיש חיבור לאינטרנט.');
-  }
-}
-
-function collectMeta(){
-  return {
-    caseId: document.getElementById('f-case').value.trim(),
-    yishuv: document.getElementById('f-yishuv').value.trim(),
-    vaada:  document.getElementById('f-vaada').value.trim(),
-    gush:   document.getElementById('f-gush').value.trim(),
-    helka:  document.getElementById('f-helka').value.trim(),
-    reqType:document.getElementById('f-req-type').value,
-    bldgType:document.getElementById('f-bldg-type').value,
-    notes:  document.getElementById('f-notes').value.trim()
-  };
-}
-
-function setLoading(show,title,sub,steps){
-  document.getElementById('loading').style.display=show?'flex':'none';
-  if(title) document.getElementById('loading-title').textContent=title;
-  if(sub)   document.getElementById('loading-sub').textContent=sub;
-  if(steps) document.getElementById('loading-steps').textContent=steps;
-}
-
-// ─────────────────────────────────────────────
-//  ANTHROPIC API
-// ─────────────────────────────────────────────
-async function runAnalysis(){
-  const meta=state.metadata;
-  const content=[];
-
-  for(const f of state.files){
-    if(f.base64 && f.mediaType && f.mediaType!=='image/tiff'){
-      if(f.mediaType==='application/pdf'){
-        content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:f.base64}});
-      } else {
-        content.push({type:'image',source:{type:'base64',media_type:f.mediaType,data:f.base64}});
-      }
-    } else if(f.text){
-      content.push({type:'text',text:`=== תוכן קובץ: ${f.name} ===\n${f.text.substring(0,5000)}`});
-    } else if(f.status==='ocr'){
-      content.push({type:'text',text:`[קובץ ${f.name} — פורמט TIFF אינו נתמך לקריאה ישירה. יש לסמן OCR-required ולציין בנספח שדורש אימות ידני.]`});
-    } else if(f.status==='failed'){
-      content.push({type:'text',text:`[קובץ ${f.name} — נכשל בטעינה. לסמן כ"נכשל" בדוח.]`});
     }
-  }
 
-  const filesDesc=state.files.map(f=>`- ${f.name} (${fmtSize(f.size)}, סטטוס: ${stLabel(f.status)})`).join('\n');
+    function removeFile(i) { state.files.splice(i, 1); renderFileList(); }
+    function iconClass(n) { const e = ext(n); if (e === 'pdf') return 'file-icon-pdf'; if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(e)) return 'file-icon-img'; return 'file-icon-doc'; }
+    function iconLabel(n) { const e = ext(n); if (e === 'pdf') return 'PDF'; if (['jpg', 'jpeg'].includes(e)) return 'JPG'; if (e === 'png') return 'PNG'; if (['tif', 'tiff'].includes(e)) return 'TIF'; return 'DOC'; }
+    function ext(n) { return n.split('.').pop().toLowerCase(); }
+    function fmtSize(b) { if (b < 1024) return b + 'B'; if (b < 1048576) return (b / 1024).toFixed(1) + 'KB'; return (b / 1048576).toFixed(1) + 'MB'; }
+    function stLabel(s) { return { uploaded: 'נקלט', parsed: 'נותח', ocr: 'OCR', failed: 'שגיאה', analyzing: 'מנתח...' }[s] || s; }
 
-  content.push({type:'text',text:`
+    function updateFileStatus(i, s) {
+      state.files[i].status = s;
+      const el = document.getElementById('fst-' + i);
+      if (el) { el.className = 'file-status st-' + s; el.textContent = stLabel(s); }
+    }
+
+    // ─────────────────────────────────────────────
+    //  FILE READING
+    // ─────────────────────────────────────────────
+    function readBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(file); }); }
+    function readText(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file, 'UTF-8'); }); }
+
+    // ─────────────────────────────────────────────
+    //  ANALYSIS FLOW
+    // ─────────────────────────────────────────────
+    async function startAnalysis() {
+      const meta = collectMeta();
+
+      if (!meta.caseId && !meta.yishuv && !meta.gush) { alert('נא למלא לפחות מזהה תיק, ישוב וגוש.'); return; }
+      if (!state.files.length) { alert('נא להעלות לפחות מסמך אחד לניתוח.'); return; }
+
+      state.metadata = meta;
+      setLoading(true, 'קורא מסמכים...', 'שלב 1 — טעינת קבצים');
+
+      for (let i = 0; i < state.files.length; i++) {
+        const f = state.files[i];
+        updateFileStatus(i, 'analyzing');
+        try {
+          const e = ext(f.name);
+          if (['pdf', 'jpg', 'jpeg', 'png'].includes(e)) {
+            f.base64 = await readBase64(f.file);
+            f.mediaType = e === 'pdf' ? 'application/pdf' : e === 'jpg' || e === 'jpeg' ? 'image/jpeg' : 'image/png';
+            f.status = 'parsed';
+          } else if (['tif', 'tiff'].includes(e)) {
+            f.base64 = await readBase64(f.file);
+            f.mediaType = 'image/tiff';
+            f.status = 'ocr'; // tiff cannot be sent directly, mark as OCR-needed
+          } else {
+            f.text = await readText(f.file);
+            f.status = 'parsed';
+          }
+        } catch (err) { f.status = 'failed'; }
+        updateFileStatus(i, f.status);
+      }
+
+      setLoading(true, 'שולח לניתוח AI...', 'שלב 2 — חילוץ מידע ממסמכים', 'שלב 3 יתחיל בעוד כמה שניות...');
+
+      try {
+        const result = await runAnalysis();
+        state.analysisResult = result;
+        setLoading(false);
+        renderAll(result);
+        showSection('status');
+        document.getElementById('topbar-case').textContent = meta.caseId || (meta.yishuv + (meta.gush ? ' גוש ' + meta.gush : ''));
+        document.getElementById('topbar-dot').className = 'dot dot-blue';
+      } catch (e) {
+        setLoading(false);
+        alert('שגיאה בניתוח: ' + e.message + '\n\nוודא שה-API Key תקין ושיש חיבור לאינטרנט.');
+      }
+    }
+
+    function collectMeta() {
+      return {
+        caseId: document.getElementById('f-case').value.trim(),
+        yishuv: document.getElementById('f-yishuv').value.trim(),
+        vaada: document.getElementById('f-vaada').value.trim(),
+        gush: document.getElementById('f-gush').value.trim(),
+        helka: document.getElementById('f-helka').value.trim(),
+        reqType: document.getElementById('f-req-type').value,
+        bldgType: document.getElementById('f-bldg-type').value,
+        notes: document.getElementById('f-notes').value.trim()
+      };
+    }
+
+    function setLoading(show, title, sub, steps) {
+      document.getElementById('loading').style.display = show ? 'flex' : 'none';
+      if (title) document.getElementById('loading-title').textContent = title;
+      if (sub) document.getElementById('loading-sub').textContent = sub;
+      if (steps) document.getElementById('loading-steps').textContent = steps;
+    }
+
+    // ─────────────────────────────────────────────
+    //  ANTHROPIC API
+    // ─────────────────────────────────────────────
+    async function runAnalysis() {
+      const meta = state.metadata;
+      const content = [];
+
+      for (const f of state.files) {
+        if (f.base64 && f.mediaType && f.mediaType !== 'image/tiff') {
+          if (f.mediaType === 'application/pdf') {
+            content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+          } else {
+            content.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+          }
+        } else if (f.text) {
+          content.push({ type: 'text', text: `=== תוכן קובץ: ${f.name} ===\n${f.text.substring(0, 5000)}` });
+        } else if (f.status === 'ocr') {
+          content.push({ type: 'text', text: `[קובץ ${f.name} — פורמט TIFF אינו נתמך לקריאה ישירה. יש לסמן OCR-required ולציין בנספח שדורש אימות ידני.]` });
+        } else if (f.status === 'failed') {
+          content.push({ type: 'text', text: `[קובץ ${f.name} — נכשל בטעינה. לסמן כ"נכשל" בדוח.]` });
+        }
+      }
+
+      const filesDesc = state.files.map(f => `- ${f.name} (${fmtSize(f.size)}, סטטוס: ${stLabel(f.status)})`).join('\n');
+
+      content.push({
+        type: 'text', text: `
 אתה מנתח תכנוני בכיר במשרד החקלאות וביטחון המזון.
 נתח את תיק הבקשה שלהלן בצורה מקיפה, מקצועית ומבוססת-מקורות.
 
 פרטי התיק:
-- מספר תיק: ${meta.caseId||'לא צוין'}
-- יישוב: ${meta.yishuv||'לא צוין'} | ועדה: ${meta.vaada||'לא צוין'}
-- גוש: ${meta.gush||'לא צוין'} | חלקה: ${meta.helka||'לא צוין'}
-- סוג בקשה: ${meta.reqType||'לא צוין'}
-- סוג מבנה: ${meta.bldgType||'לא צוין'}
-- הערות מתכנן: ${meta.notes||'אין'}
+- מספר תיק: ${meta.caseId || 'לא צוין'}
+- ישוב: ${meta.yishuv || 'לא צוין'} | ועדה: ${meta.vaada || 'לא צוין'}
+- גוש: ${meta.gush || 'לא צוין'} | חלקה: ${meta.helka || 'לא צוין'}
+- סוג בקשה: ${meta.reqType || 'לא צוין'}
+- סוג מבנה: ${meta.bldgType || 'לא צוין'}
+- הערות מתכנן: ${meta.notes || 'אין'}
 
 קבצים שהועלו:
 ${filesDesc}
@@ -658,7 +1458,7 @@ ${filesDesc}
 {
   "summary": {
     "caseId": "מספר תיק",
-    "yishuv": "יישוב",
+    "yishuv": "ישוב",
     "gush": "גוש",
     "helka": "חלקה",
     "bldgType": "סוג מבנה",
@@ -741,290 +1541,291 @@ ${filesDesc}
   },
   "appendix": {"processingLog":["..."],"ocrWarnings":[],"unavailableSources":["מידע תכנוני — לא נגיש","GovMap — לא נגיש","XPlan — לא נגיש"],"assumptions":[],"internalNotes":""}}`});
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01'},
-    body:JSON.stringify({
-      model:'claude-opus-4-5',
-      max_tokens:8192,
-      system:'אתה מנתח תכנוני בכיר. מטרתך להפיק ניתוח מקצועי, מנומק ומבוסס-מקורות בלבד. החזר JSON בלבד — ללא backticks, ללא תגי markdown, ללא שום טקסט נוסף.',
-      messages:[{role:'user',content}]
-    })
-  });
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-opus-4-5',
+          max_tokens: 8192,
+          system: 'אתה מנתח תכנוני בכיר. מטרתך להפיק ניתוח מקצועי, מנומק ומבוסס-מקורות בלבד. החזר JSON בלבד — ללא backticks, ללא תגי markdown, ללא שום טקסט נוסף.',
+          messages: [{ role: 'user', content }]
+        })
+      });
 
-  if(!resp.ok){
-    const err=await resp.text();
-    throw new Error(`API ${resp.status}: ${err.substring(0,200)}`);
-  }
-  const data=await resp.json();
-  const text=data.content.map(i=>i.text||'').join('');
-  let clean=text.replace(/```json|```/g,'').trim();
-  const start=clean.indexOf('{');
-  const end=clean.lastIndexOf('}');
-  if(start!==-1&&end!==-1) clean=clean.substring(start,end+1);
-  // Multiple parse attempts
-  const attempts=[
-    ()=>JSON.parse(clean),
-    ()=>JSON.parse(clean.replace(/,\s*([}\]])/g,'$1')),
-    ()=>JSON.parse(clean.replace(/([{,]\s*)(\w+)\s*:/g,'$1"$2":')),
-  ];
-  for(const attempt of attempts){
-    try{ return attempt(); }catch(e){}
-  }
-  // Last resort: try to extract just the summary section
-  const summaryMatch=clean.match(/"summary"\s*:\s*\{[^}]+\}/);
-  if(summaryMatch){
-    try{
-      const partial=JSON.parse('{'+summaryMatch[0]+', "checklist":[], "documents":{"uploaded":[],"missing":[],"externalSources":[]}, "normativeMap":{"zone":"לא נגיש","applicablePlans":[],"applicableRegulations":[],"ministryPolicy":"","specialConditions":[],"gaps":[]}, "comparisonTable":[], "determinations":[], "blockers":[], "opinion":{"recommendation":"נדרש בירור","certainty":"לא מספקת","rationale":"תשובת המערכת לא הושלמה — נדרש ניתוח חוזר","conditions":[],"redFlags":["תשובת API לא הושלמה"],"internalNote":"","disclaimer":"חוות דעת ראשונית פנימית בלבד."}, "appendix":{"processingLog":["תשובה חלקית התקבלה"],"ocrWarnings":[],"unavailableSources":["מידע תכנוני — לא נגיש","GovMap — לא נגיש","XPlan — לא נגיש"],"assumptions":[],"internalNotes":""}}');
-      return partial;
-    }catch(e){}
-  }
-  throw new Error('תשובת API אינה JSON תקין. נסה עם קובץ קטן יותר.');
-}
+      if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`API ${resp.status}: ${err.substring(0, 200)}`);
+      }
+      const data = await resp.json();
+      const text = data.content.map(i => i.text || '').join('');
+      let clean = text.replace(/```json|```/g, '').trim();
+      const start = clean.indexOf('{');
+      const end = clean.lastIndexOf('}');
+      if (start !== -1 && end !== -1) clean = clean.substring(start, end + 1);
+      // Multiple parse attempts
+      const attempts = [
+        () => JSON.parse(clean),
+        () => JSON.parse(clean.replace(/,\s*([}\]])/g, '$1')),
+        () => JSON.parse(clean.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":')),
+      ];
+      for (const attempt of attempts) {
+        try { return attempt(); } catch (e) { }
+      }
+      // Last resort: try to extract just the summary section
+      const summaryMatch = clean.match(/"summary"\s*:\s*\{[^}]+\}/);
+      if (summaryMatch) {
+        try {
+          const partial = JSON.parse('{' + summaryMatch[0] + ', "checklist":[], "documents":{"uploaded":[],"missing":[],"externalSources":[]}, "normativeMap":{"zone":"לא נגיש","applicablePlans":[],"applicableRegulations":[],"ministryPolicy":"","specialConditions":[],"gaps":[]}, "comparisonTable":[], "determinations":[], "blockers":[], "opinion":{"recommendation":"נדרש בירור","certainty":"לא מספקת","rationale":"תשובת המערכת לא הושלמה — נדרש ניתוח חוזר","conditions":[],"redFlags":["תשובת API לא הושלמה"],"internalNote":"","disclaimer":"חוות דעת ראשונית פנימית בלבד."}, "appendix":{"processingLog":["תשובה חלקית התקבלה"],"ocrWarnings":[],"unavailableSources":["מידע תכנוני — לא נגיש","GovMap — לא נגיש","XPlan — לא נגיש"],"assumptions":[],"internalNotes":""}}');
+          return partial;
+        } catch (e) { }
+      }
+      throw new Error('תשובת API אינה JSON תקין. נסה עם קובץ קטן יותר.');
+    }
 
-// ─────────────────────────────────────────────
-//  RENDER ALL SECTIONS
-// ─────────────────────────────────────────────
-function renderAll(r){
-  renderStatus(r);
-  renderDocuments(r);
-  renderThreshold(r);
-  renderNormative(r);
-  renderAnalysis(r);
-  renderDeterminations(r);
-  renderComparison(r);
-  renderBlockers(r);
-  renderOpinion(r);
-  renderAppendix(r);
+    // ─────────────────────────────────────────────
+    //  RENDER ALL SECTIONS
+    // ─────────────────────────────────────────────
+    function renderAll(r) {
+      renderStatus(r);
+      renderDocuments(r);
+      renderThreshold(r);
+      renderNormative(r);
+      renderAnalysis(r);
+      renderDeterminations(r);
+      renderComparison(r);
+      renderBlockers(r);
+      renderOpinion(r);
+      renderAppendix(r);
 
-  const hard=(r.blockers||[]).filter(b=>b.type==='קשיח'&&b.closureStatus==='פתוח').length;
-  const bb=document.getElementById('badge-blockers');
-  if(hard>0){ bb.textContent=hard; bb.style.display=''; } else bb.style.display='none';
-}
+      const hard = (r.blockers || []).filter(b => b.type === 'קשיח' && b.closureStatus === 'פתוח').length;
+      const bb = document.getElementById('badge-blockers');
+      if (hard > 0) { bb.textContent = hard; bb.style.display = ''; } else bb.style.display = 'none';
+    }
 
-// ── Helpers ──
-function certBadge(c){
-  const m={'גבוהה':'badge-green','בינונית':'badge-blue','נמוכה':'badge-amber','לא מספקת':'badge-red'};
-  return `<span class="badge ${m[c]||'badge-gray'}">${c||'—'}</span>`;
-}
-function recBadge(r){
-  const m={'להמליץ':'badge-green','להמליץ בתנאים':'badge-amber','נדרש בירור':'badge-blue','לא להמליץ':'badge-red'};
-  return `<span class="badge badge-lg ${m[r]||'badge-gray'}">${r||'—'}</span>`;
-}
-function recClass(r){
-  return {'להמליץ':'dc-recommend','להמליץ בתנאים':'dc-conditions','נדרש בירור':'dc-clarify','לא להמליץ':'dc-reject'}[r]||'dc-pending';
-}
-function matchBadge(m){
-  const c={'תואם':'badge-green','אי-התאמה':'badge-red','לא ידוע':'badge-amber'};
-  return `<span class="badge ${c[m]||'badge-gray'}">${m||'—'}</span>`;
-}
-function checkBadge(s){
-  return `<span class="check-status ${'נבדק'===s?'cs-done':'לא ישים'===s?'cs-na':'cs-pending'}">${s||'—'}</span>`;
-}
-function safe(arr){ return (arr||[]).filter(x=>x&&x!=='...'); }
+    // ── Helpers ──
+    function certBadge(c) {
+      const m = { 'גבוהה': 'badge-green', 'בינונית': 'badge-blue', 'נמוכה': 'badge-amber', 'לא מספקת': 'badge-red' };
+      return `<span class="badge ${m[c] || 'badge-gray'}">${c || '—'}</span>`;
+    }
+    function recBadge(r) {
+      const m = { 'להמליץ': 'badge-green', 'להמליץ בתנאים': 'badge-amber', 'נדרש בירור': 'badge-blue', 'לא להמליץ': 'badge-red' };
+      return `<span class="badge badge-lg ${m[r] || 'badge-gray'}">${r || '—'}</span>`;
+    }
+    function recClass(r) {
+      return { 'להמליץ': 'dc-recommend', 'להמליץ בתנאים': 'dc-conditions', 'נדרש בירור': 'dc-clarify', 'לא להמליץ': 'dc-reject' }[r] || 'dc-pending';
+    }
+    function matchBadge(m) {
+      const c = { 'תואם': 'badge-green', 'אי-התאמה': 'badge-red', 'לא ידוע': 'badge-amber' };
+      return `<span class="badge ${c[m] || 'badge-gray'}">${m || '—'}</span>`;
+    }
+    function checkBadge(s) {
+      return `<span class="check-status ${'נבדק' === s ? 'cs-done' : 'לא ישים' === s ? 'cs-na' : 'cs-pending'}">${s || '—'}</span>`;
+    }
+    function safe(arr) { return (arr || []).filter(x => x && x !== '...'); }
 
-// ── Status ──
-function renderStatus(r){
-  const s=r.summary||{};
-  document.getElementById('status-content').innerHTML=`
+    // ── Status ──
+    function renderStatus(r) {
+      const s = r.summary || {};
+      document.getElementById('status-content').innerHTML = `
     <div class="grid-4" style="margin-bottom:16px">
-      <div class="stat"><div class="stat-label">מספר תיק</div><div class="stat-value" style="font-size:15px">${s.caseId||'—'}</div></div>
-      <div class="stat"><div class="stat-label">יישוב / גוש-חלקה</div><div class="stat-value" style="font-size:13px">${s.yishuv||'—'} / ${s.gush||'—'}-${s.helka||'—'}</div></div>
-      <div class="stat"><div class="stat-label">סוג מבנה</div><div class="stat-value" style="font-size:13px">${s.bldgType||'—'}</div></div>
-      <div class="stat"><div class="stat-label">תאריך ניתוח</div><div class="stat-value" style="font-size:13px">${s.analysisDate||new Date().toLocaleDateString('he-IL')}</div></div>
+      <div class="stat"><div class="stat-label">מספר תיק</div><div class="stat-value" style="font-size:15px">${s.caseId || '—'}</div></div>
+      <div class="stat"><div class="stat-label">ישוב / גוש-חלקה</div><div class="stat-value" style="font-size:13px">${s.yishuv || '—'} / ${s.gush || '—'}-${s.helka || '—'}</div></div>
+      <div class="stat"><div class="stat-label">סוג מבנה</div><div class="stat-value" style="font-size:13px">${s.bldgType || '—'}</div></div>
+      <div class="stat"><div class="stat-label">תאריך ניתוח</div><div class="stat-value" style="font-size:13px">${s.analysisDate || new Date().toLocaleDateString('he-IL')}</div></div>
     </div>
     <div class="decision-card ${recClass(s.overallStatus)}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         ${recBadge(s.overallStatus)}
         <span style="font-size:13px">ודאות: ${certBadge(s.certainty)}</span>
-        <span class="badge badge-gray" style="margin-right:auto">${s.reqType||''}</span>
+        <span class="badge badge-gray" style="margin-right:auto">${s.reqType || ''}</span>
       </div>
       <div style="font-size:13px;font-weight:600;margin-bottom:6px">ממצאים מרכזיים</div>
-      <ul style="font-size:13px;padding-right:18px;line-height:1.9">${safe(s.keyFindings).map(f=>`<li>${f}</li>`).join('')}</ul>
-      ${safe(s.criticalGaps).length?`<div style="margin-top:10px"><span class="badge badge-red" style="margin-bottom:6px">פערים קריטיים</span><ul style="font-size:12px;padding-right:18px;line-height:1.8;color:var(--red)">${safe(s.criticalGaps).map(g=>`<li>${g}</li>`).join('')}</ul></div>`:''}
+      <ul style="font-size:13px;padding-right:18px;line-height:1.9">${safe(s.keyFindings).map(f => `<li>${f}</li>`).join('')}</ul>
+      ${safe(s.criticalGaps).length ? `<div style="margin-top:10px"><span class="badge badge-red" style="margin-bottom:6px">פערים קריטיים</span><ul style="font-size:12px;padding-right:18px;line-height:1.8;color:var(--red)">${safe(s.criticalGaps).map(g => `<li>${g}</li>`).join('')}</ul></div>` : ''}
     </div>
     <div class="alert alert-warn"><span class="alert-icon">⚠</span><strong>אזהרה:</strong> זוהי חוות דעת ראשונית פנימית בלבד. אינה מחליפה שיקול דעת מקצועי ואינה מהווה החלטה רשמית.</div>`;
-}
+    }
 
-// ── Documents ──
-function renderDocuments(r){
-  const d=r.documents||{};
-  const up=d.uploaded||[]; const miss=d.missing||[]; const ext2=d.externalSources||[];
-  document.getElementById('docs-content').innerHTML=`
+    // ── Documents ──
+    function renderDocuments(r) {
+      const d = r.documents || {};
+      const up = d.uploaded || []; const miss = d.missing || []; const ext2 = d.externalSources || [];
+      document.getElementById('docs-content').innerHTML = `
     <div class="card">
       <div class="card-header"><span class="card-title">מסמכים שנקלטו (${up.length})</span></div>
-      ${up.map(f=>`
+      ${up.map(f => `
         <div class="file-item">
           <div class="file-icon ${iconClass(f.name)}">${iconLabel(f.name)}</div>
           <div style="flex:1;min-width:0">
             <div class="file-name">${f.name}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${f.parsedContent||''}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${f.parsedContent || ''}</div>
           </div>
-          <span class="file-status st-${f.status==='parsed'?'parsed':f.status==='ocr'?'ocr':'failed'}">${f.status==='parsed'?'נותח':f.status==='ocr'?'OCR':'שגיאה'}</span>
-          ${f.ocrWarning?'<span class="ocr-flag">OCR</span>':''}
+          <span class="file-status st-${f.status === 'parsed' ? 'parsed' : f.status === 'ocr' ? 'ocr' : 'failed'}">${f.status === 'parsed' ? 'נותח' : f.status === 'ocr' ? 'OCR' : 'שגיאה'}</span>
+          ${f.ocrWarning ? '<span class="ocr-flag">OCR</span>' : ''}
         </div>`).join('')}
     </div>
-    ${miss.length?`<div class="card"><div class="card-header"><span class="card-title">מסמכים חסרים (${miss.length})</span></div>
-    ${miss.map(m=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span class="badge ${m.criticality==='קריטי'?'badge-red':m.criticality==='חשוב'?'badge-amber':'badge-gray'}">${m.criticality}</span><span style="font-size:13px;font-weight:500">${m.name}</span><span style="font-size:12px;color:var(--text3)">${m.reason}</span></div>`).join('')}</div>`:''}
+    ${miss.length ? `<div class="card"><div class="card-header"><span class="card-title">מסמכים חסרים (${miss.length})</span></div>
+    ${miss.map(m => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span class="badge ${m.criticality === 'קריטי' ? 'badge-red' : m.criticality === 'חשוב' ? 'badge-amber' : 'badge-gray'}">${m.criticality}</span><span style="font-size:13px;font-weight:500">${m.name}</span><span style="font-size:12px;color:var(--text3)">${m.reason}</span></div>`).join('')}</div>` : ''}
     <div class="card"><div class="card-header"><span class="card-title">מקורות חיצוניים — סטטוס</span></div>
     <div class="alert alert-err" style="margin-bottom:12px"><span class="alert-icon">🔴</span>כל המקורות החיצוניים אינם נגישים. המערכת פועלת במצב fail-closed.</div>
-    ${ext2.map(s=>`<div class="source-item" style="margin-bottom:6px"><div><div class="source-name">${s.name}</div><div style="font-size:11px;color:var(--text3)">${s.impact||''}</div></div><span class="badge src-unavailable">לא נגיש</span></div>`).join('')}</div>`;
-}
+    ${ext2.map(s => `<div class="source-item" style="margin-bottom:6px"><div><div class="source-name">${s.name}</div><div style="font-size:11px;color:var(--text3)">${s.impact || ''}</div></div><span class="badge src-unavailable">לא נגיש</span></div>`).join('')}</div>`;
+    }
 
-// ── Threshold / Checklist ──
-function renderThreshold(r){
-  const cl=r.checklist||[];
-  const done=cl.filter(c=>c.status==='נבדק').length;
-  document.getElementById('thresh-content').innerHTML=`
+    // ── Threshold / Checklist ──
+    function renderThreshold(r) {
+      const cl = r.checklist || [];
+      const done = cl.filter(c => c.status === 'נבדק').length;
+      document.getElementById('thresh-content').innerHTML = `
     <div class="card">
       <div class="card-header"><span class="card-title">צ׳קליסט 12 מרכיבי בדיקה</span><span class="badge badge-blue" style="margin-right:auto">${done}/${cl.length} נבדקו</span></div>
-      <div class="progress"><div class="progress-fill" style="width:${Math.round(done/Math.max(cl.length,1)*100)}%"></div></div>
+      <div class="progress"><div class="progress-fill" style="width:${Math.round(done / Math.max(cl.length, 1) * 100)}%"></div></div>
       <div style="margin-top:14px">
-        ${cl.map(c=>`<div class="check-item"><span class="check-num">${c.num}</span><div style="flex:1"><div class="check-label">${c.label}</div>${c.finding?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${c.finding}</div>`:''}</div>${certBadge(c.certainty)}${checkBadge(c.status)}</div>`).join('')}
+        ${cl.map(c => `<div class="check-item"><span class="check-num">${c.num}</span><div style="flex:1"><div class="check-label">${c.label}</div>${c.finding ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${c.finding}</div>` : ''}</div>${certBadge(c.certainty)}${checkBadge(c.status)}</div>`).join('')}
       </div>
     </div>`;
-}
+    }
 
-// ── Normative ──
-function renderNormative(r){
-  const n=r.normativeMap||{};
-  document.getElementById('norm-content').innerHTML=`
+    // ── Normative ──
+    function renderNormative(r) {
+      const n = r.normativeMap || {};
+      document.getElementById('norm-content').innerHTML = `
     <div class="alert alert-warn"><span class="alert-icon">⚠</span>ייעוד קרקע ותכניות חלות לא אומתו ממקור חיצוני (מידע תכנוני לא נגיש). כל המפורט מבוסס על מסמכי התיק בלבד.</div>
     <div class="card">
       <div class="card-header"><span class="card-title">מפת תחולה נורמטיבית</span></div>
       <table class="tbl" style="margin-bottom:12px">
-        <tr><td style="font-weight:500;width:150px">ייעוד קרקע</td><td><span class="badge badge-amber">${n.zone||'לא נגיש — נדרש בירור'}</span></td></tr>
-        <tr><td style="font-weight:500">מדיניות משרד</td><td style="font-size:12px">${n.ministryPolicy||'—'}</td></tr>
+        <tr><td style="font-weight:500;width:150px">ייעוד קרקע</td><td><span class="badge badge-amber">${n.zone || 'לא נגיש — נדרש בירור'}</span></td></tr>
+        <tr><td style="font-weight:500">מדיניות משרד</td><td style="font-size:12px">${n.ministryPolicy || '—'}</td></tr>
       </table>
-      <div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">תכניות חלות</div>${(n.applicablePlans||[]).map(p=>`<span class="badge badge-blue" style="margin-left:4px;margin-bottom:4px">${p}</span>`).join('')}</div>
-      <div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">תקנות רלוונטיות</div>${(n.applicableRegulations||[]).map(p=>`<span class="badge badge-gray" style="margin-left:4px;margin-bottom:4px">${p}</span>`).join('')}</div>
-      ${safe(n.specialConditions).length?`<div><div style="font-size:12px;font-weight:600;margin-bottom:6px">תנאים מיוחדים</div><ul style="font-size:12px;padding-right:16px;line-height:1.8">${safe(n.specialConditions).map(c=>`<li>${c}</li>`).join('')}</ul></div>`:''}
-      ${safe(n.gaps).length?`<div style="margin-top:10px"><span class="badge badge-red" style="margin-bottom:6px;display:inline-block">פערי מידע</span><ul style="font-size:12px;padding-right:16px;color:var(--red)">${safe(n.gaps).map(g=>`<li>${g}</li>`).join('')}</ul></div>`:''}
+      <div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">תכניות חלות</div>${(n.applicablePlans || []).map(p => `<span class="badge badge-blue" style="margin-left:4px;margin-bottom:4px">${p}</span>`).join('')}</div>
+      <div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">תקנות רלוונטיות</div>${(n.applicableRegulations || []).map(p => `<span class="badge badge-gray" style="margin-left:4px;margin-bottom:4px">${p}</span>`).join('')}</div>
+      ${safe(n.specialConditions).length ? `<div><div style="font-size:12px;font-weight:600;margin-bottom:6px">תנאים מיוחדים</div><ul style="font-size:12px;padding-right:16px;line-height:1.8">${safe(n.specialConditions).map(c => `<li>${c}</li>`).join('')}</ul></div>` : ''}
+      ${safe(n.gaps).length ? `<div style="margin-top:10px"><span class="badge badge-red" style="margin-bottom:6px;display:inline-block">פערי מידע</span><ul style="font-size:12px;padding-right:16px;color:var(--red)">${safe(n.gaps).map(g => `<li>${g}</li>`).join('')}</ul></div>` : ''}
     </div>`;
-}
+    }
 
-// ── Analysis ──
-function renderAnalysis(r){
-  const s=r.summary||{}; const cl=r.checklist||[];
-  document.getElementById('analysis-content').innerHTML=`
+    // ── Analysis ──
+    function renderAnalysis(r) {
+      const s = r.summary || {}; const cl = r.checklist || [];
+      document.getElementById('analysis-content').innerHTML = `
     <div class="card">
       <div class="card-header"><span class="card-title">סיווג מקצועי וניתוח כרטיס מבנה</span></div>
-      <div class="grid-2"><div><div style="font-size:12px;color:var(--text3);margin-bottom:4px">סוג מבנה מסווג</div><div style="font-size:15px;font-weight:600">${s.bldgType||'לא הוגדר'}</div></div><div><div style="font-size:12px;color:var(--text3);margin-bottom:4px">סטטוס ניתוח</div>${recBadge(s.overallStatus)}</div></div>
+      <div class="grid-2"><div><div style="font-size:12px;color:var(--text3);margin-bottom:4px">סוג מבנה מסווג</div><div style="font-size:15px;font-weight:600">${s.bldgType || 'לא הוגדר'}</div></div><div><div style="font-size:12px;color:var(--text3);margin-bottom:4px">סטטוס ניתוח</div>${recBadge(s.overallStatus)}</div></div>
       <hr class="divider">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px">ממצאי ניתוח לפי שלב</div>
-      ${cl.filter(c=>c.status==='נבדק').map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="badge badge-gray" style="font-size:10px">${c.num}</span><span style="font-size:13px;font-weight:500">${c.label}</span>${certBadge(c.certainty)}</div><div style="font-size:12px;color:var(--text2);padding-right:24px">${c.finding||'—'}</div></div>`).join('')}
+      ${cl.filter(c => c.status === 'נבדק').map(c => `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="badge badge-gray" style="font-size:10px">${c.num}</span><span style="font-size:13px;font-weight:500">${c.label}</span>${certBadge(c.certainty)}</div><div style="font-size:12px;color:var(--text2);padding-right:24px">${c.finding || '—'}</div></div>`).join('')}
     </div>`;
-}
+    }
 
-// ── Determinations ──
-function renderDeterminations(r){
-  const dets=r.determinations||[];
-  const cats=['סטטוטורית','רישויית','מדיניות משרד','עובדתית-ראייתית','מערכתית-נגזרת'];
-  const icons={'סטטוטורית':'⚖','רישויית':'📜','מדיניות משרד':'🏛','עובדתית-ראייתית':'🔎','מערכתית-נגזרת':'⚙'};
-  const html=cats.map(cat=>{
-    const items=dets.filter(d=>d.category===cat);
-    if(!items.length) return '';
-    return `<div class="card" style="margin-bottom:16px">
-      <div class="card-header"><span style="font-size:18px">${icons[cat]||'📌'}</span><span class="card-title">קביעות ${cat}</span><span class="badge badge-gray" style="margin-right:auto">${items.length}</span></div>
-      ${items.map(d=>`<div class="det-card" style="margin-bottom:10px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:5px">${d.type||''}</div>
+    // ── Determinations ──
+    function renderDeterminations(r) {
+      const dets = r.determinations || [];
+      const cats = ['סטטוטורית', 'רישויית', 'מדיניות משרד', 'עובדתית-ראייתית', 'מערכתית-נגזרת'];
+      const icons = { 'סטטוטורית': '⚖', 'רישויית': '📜', 'מדיניות משרד': '🏛', 'עובדתית-ראייתית': '🔎', 'מערכתית-נגזרת': '⚙' };
+      const html = cats.map(cat => {
+        const items = dets.filter(d => d.category === cat);
+        if (!items.length) return '';
+        return `<div class="card" style="margin-bottom:16px">
+      <div class="card-header"><span style="font-size:18px">${icons[cat] || '📌'}</span><span class="card-title">קביעות ${cat}</span><span class="badge badge-gray" style="margin-right:auto">${items.length}</span></div>
+      ${items.map(d => `<div class="det-card" style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:5px">${d.type || ''}</div>
         <div style="font-size:14px;font-weight:600;margin-bottom:8px">${d.determination}</div>
-        <div class="grid-2" style="font-size:12px;color:var(--text2);margin-bottom:8px;gap:4px"><div><strong>מסמך:</strong> ${d.docName||'—'}</div><div><strong>מיקום:</strong> ${d.location||'—'}</div></div>
-        ${d.quote&&d.quote!=='...'?`<div style="background:var(--surface2);border-right:3px solid var(--blue);padding:8px 10px;border-radius:4px;font-size:12px;margin-bottom:8px;font-style:italic">"${d.quote}"</div>`:''}
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${d.professional||''}</div>
+        <div class="grid-2" style="font-size:12px;color:var(--text2);margin-bottom:8px;gap:4px"><div><strong>מסמך:</strong> ${d.docName || '—'}</div><div><strong>מיקום:</strong> ${d.location || '—'}</div></div>
+        ${d.quote && d.quote !== '...' ? `<div style="background:var(--surface2);border-right:3px solid var(--blue);padding:8px 10px;border-radius:4px;font-size:12px;margin-bottom:8px;font-style:italic">"${d.quote}"</div>` : ''}
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${d.professional || ''}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="badge badge-gray" style="font-size:10px">${d.sourceType||''}</span>
+          <span class="badge badge-gray" style="font-size:10px">${d.sourceType || ''}</span>
           ${certBadge(d.certainty)}
-          ${d.ocrBased?'<span class="ocr-flag">OCR — דורש אימות ידני</span>':''}
-          ${d.action&&d.action!=='...'?`<span class="badge badge-amber" style="font-size:10px">${d.action}</span>`:''}
+          ${d.ocrBased ? '<span class="ocr-flag">OCR — דורש אימות ידני</span>' : ''}
+          ${d.action && d.action !== '...' ? `<span class="badge badge-amber" style="font-size:10px">${d.action}</span>` : ''}
         </div>
       </div>`).join('')}
     </div>`;
-  }).join('');
-  document.getElementById('det-content').innerHTML=html||'<div class="alert alert-info"><span class="alert-icon">ℹ</span>לא נמצאו קביעות.</div>';
-}
+      }).join('');
+      document.getElementById('det-content').innerHTML = html || '<div class="alert alert-info"><span class="alert-icon">ℹ</span>לא נמצאו קביעות.</div>';
+    }
 
-// ── Comparison ──
-function renderComparison(r){
-  const rows=r.comparisonTable||[];
-  document.getElementById('comp-content').innerHTML=`
+    // ── Comparison ──
+    function renderComparison(r) {
+      const rows = r.comparisonTable || [];
+      document.getElementById('comp-content').innerHTML = `
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr>
         <th>רכיב נבדק</th><th>המבוקש</th><th>המקור הקובע</th><th>המותר/המומלץ</th>
         <th>התאמה</th><th>פער/סתירה</th><th>פעולה נדרשת</th><th>ודאות</th>
       </tr></thead>
-      <tbody>${rows.map(row=>`<tr>
-        <td style="font-weight:500">${row.component||''}</td>
-        <td>${row.requested||'—'}</td>
-        <td style="font-size:11px;color:var(--text3)">${row.source||'—'}</td>
-        <td>${row.allowed||'—'}</td>
+      <tbody>${rows.map(row => `<tr>
+        <td style="font-weight:500">${row.component || ''}</td>
+        <td>${row.requested || '—'}</td>
+        <td style="font-size:11px;color:var(--text3)">${row.source || '—'}</td>
+        <td>${row.allowed || '—'}</td>
         <td>${matchBadge(row.match)}</td>
-        <td style="font-size:12px;color:var(--text2)">${row.gap&&row.gap!=='...'?row.gap:'—'}</td>
-        <td style="font-size:12px">${row.action&&row.action!=='...'?row.action:'—'}</td>
+        <td style="font-size:12px;color:var(--text2)">${row.gap && row.gap !== '...' ? row.gap : '—'}</td>
+        <td style="font-size:12px">${row.action && row.action !== '...' ? row.action : '—'}</td>
         <td>${certBadge(row.certainty)}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
-}
+    }
 
-// ── Blockers ──
-function renderBlockers(r){
-  const bl=r.blockers||[];
-  const hard=bl.filter(b=>b.type==='קשיח');
-  const soft=bl.filter(b=>b.type==='רך');
-  let html='';
-  if(hard.length){ html+=`<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px"><span class="blocker-hard">⛔ חסמים קשיחים (${hard.length})</span></div>${hard.map(b=>`<div class="card" style="border-right:4px solid var(--red);margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="blocker-hard">קשיח</span><span class="badge badge-gray" style="font-size:10px">${b.category||''}</span><span class="badge ${b.closureStatus==='נסגר'?'badge-green':'badge-red'}" style="margin-right:auto">${b.closureStatus||'פתוח'}</span></div><div style="font-size:14px;font-weight:500;margin-bottom:8px">${b.description||''}</div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:6px"><div><strong>מקור:</strong> ${b.source||'—'}</div><div><strong>נדרש:</strong> ${b.required||'—'}</div><div><strong>מדוע:</strong> ${b.why||'—'}</div><div><strong>השפעה:</strong> ${b.impact||'—'}</div></div></div>`).join('')}</div>`; }
-  if(soft.length){ html+=`<div><div style="font-size:13px;font-weight:600;margin-bottom:8px"><span class="blocker-soft">⚠ חסמים רכים/תנאים (${soft.length})</span></div>${soft.map(b=>`<div class="card" style="border-right:4px solid var(--amber-light);margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="blocker-soft">רך</span><span class="badge badge-gray" style="font-size:10px">${b.category||''}</span><span class="badge ${b.closureStatus==='נסגר'?'badge-green':'badge-amber'}" style="margin-right:auto">${b.closureStatus||'פתוח'}</span></div><div style="font-size:14px;font-weight:500;margin-bottom:8px">${b.description||''}</div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:6px"><div><strong>מקור:</strong> ${b.source||'—'}</div><div><strong>נדרש:</strong> ${b.required||'—'}</div></div></div>`).join('')}</div>`; }
-  if(!html) html='<div class="alert alert-ok"><span class="alert-icon">✓</span>לא זוהו חסמים פתוחים.</div>';
-  document.getElementById('blockers-content').innerHTML=html;
-}
+    // ── Blockers ──
+    function renderBlockers(r) {
+      const bl = r.blockers || [];
+      const hard = bl.filter(b => b.type === 'קשיח');
+      const soft = bl.filter(b => b.type === 'רך');
+      let html = '';
+      if (hard.length) { html += `<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px"><span class="blocker-hard">⛔ חסמים קשיחים (${hard.length})</span></div>${hard.map(b => `<div class="card" style="border-right:4px solid var(--red);margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="blocker-hard">קשיח</span><span class="badge badge-gray" style="font-size:10px">${b.category || ''}</span><span class="badge ${b.closureStatus === 'נסגר' ? 'badge-green' : 'badge-red'}" style="margin-right:auto">${b.closureStatus || 'פתוח'}</span></div><div style="font-size:14px;font-weight:500;margin-bottom:8px">${b.description || ''}</div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:6px"><div><strong>מקור:</strong> ${b.source || '—'}</div><div><strong>נדרש:</strong> ${b.required || '—'}</div><div><strong>מדוע:</strong> ${b.why || '—'}</div><div><strong>השפעה:</strong> ${b.impact || '—'}</div></div></div>`).join('')}</div>`; }
+      if (soft.length) { html += `<div><div style="font-size:13px;font-weight:600;margin-bottom:8px"><span class="blocker-soft">⚠ חסמים רכים/תנאים (${soft.length})</span></div>${soft.map(b => `<div class="card" style="border-right:4px solid var(--amber-light);margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="blocker-soft">רך</span><span class="badge badge-gray" style="font-size:10px">${b.category || ''}</span><span class="badge ${b.closureStatus === 'נסגר' ? 'badge-green' : 'badge-amber'}" style="margin-right:auto">${b.closureStatus || 'פתוח'}</span></div><div style="font-size:14px;font-weight:500;margin-bottom:8px">${b.description || ''}</div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:6px"><div><strong>מקור:</strong> ${b.source || '—'}</div><div><strong>נדרש:</strong> ${b.required || '—'}</div></div></div>`).join('')}</div>`; }
+      if (!html) html = '<div class="alert alert-ok"><span class="alert-icon">✓</span>לא זוהו חסמים פתוחים.</div>';
+      document.getElementById('blockers-content').innerHTML = html;
+    }
 
-// ── Opinion ──
-function renderOpinion(r){
-  const op=r.opinion||{};
-  const conds=safe(op.conditions||[]).filter(c=>c.condition&&c.condition!=='...');
-  const flags=safe(op.redFlags||[]);
-  document.getElementById('opinion-content').innerHTML=`
-    <div class="alert alert-warn" style="margin-bottom:16px"><span class="alert-icon">⚠</span><strong>הצהרת כלי:</strong> ${op.disclaimer||'חוות דעת ראשונית פנימית בלבד. אינה מחליפה שיקול דעת מקצועי.'}</div>
+    // ── Opinion ──
+    function renderOpinion(r) {
+      const op = r.opinion || {};
+      const conds = safe(op.conditions || []).filter(c => c.condition && c.condition !== '...');
+      const flags = safe(op.redFlags || []);
+      document.getElementById('opinion-content').innerHTML = `
+    <div class="alert alert-warn" style="margin-bottom:16px"><span class="alert-icon">⚠</span><strong>הצהרת כלי:</strong> ${op.disclaimer || 'חוות דעת ראשונית פנימית בלבד. אינה מחליפה שיקול דעת מקצועי.'}</div>
     <div class="decision-card ${recClass(op.recommendation)}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">${recBadge(op.recommendation)}<span style="font-size:13px">ודאות: ${certBadge(op.certainty)}</span></div>
-      <div style="font-size:14px;line-height:1.8">${op.rationale||'—'}</div>
+      <div style="font-size:14px;line-height:1.8">${op.rationale || '—'}</div>
     </div>
-    ${conds.length?`<div class="card"><div class="card-header"><span class="card-title">תנאים לסגירה</span></div>${conds.map(c=>`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="${c.type==='קשיח'?'blocker-hard':'blocker-soft'}">${c.type||'תנאי'}</span><span style="font-size:13px;font-weight:500">${c.condition}</span></div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:4px"><div><strong>מקור:</strong> ${c.source||'—'}</div><div><strong>נדרש:</strong> ${c.required||'—'}</div><div><strong>מדוע:</strong> ${c.why||'—'}</div><div><strong>השפעה:</strong> ${c.impact||'—'}</div></div></div>`).join('')}</div>`:''}
-    ${flags.length?`<div class="card" style="border-right:4px solid var(--red)"><div class="card-header"><span class="card-title">🚩 דגלים אדומים</span></div><ul style="font-size:13px;padding-right:16px;line-height:1.8">${flags.map(f=>`<li style="color:var(--red)">${f}</li>`).join('')}</ul></div>`:''}
-    ${op.internalNote&&op.internalNote!=='...'?`<div class="card" style="background:var(--surface2)"><div class="card-header"><span class="card-title">📋 הערה פנימית</span></div><div style="font-size:13px;color:var(--text2)">${op.internalNote}</div></div>`:''}`;
-}
+    ${conds.length ? `<div class="card"><div class="card-header"><span class="card-title">תנאים לסגירה</span></div>${conds.map(c => `<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="${c.type === 'קשיח' ? 'blocker-hard' : 'blocker-soft'}">${c.type || 'תנאי'}</span><span style="font-size:13px;font-weight:500">${c.condition}</span></div><div class="grid-2" style="font-size:12px;color:var(--text2);gap:4px"><div><strong>מקור:</strong> ${c.source || '—'}</div><div><strong>נדרש:</strong> ${c.required || '—'}</div><div><strong>מדוע:</strong> ${c.why || '—'}</div><div><strong>השפעה:</strong> ${c.impact || '—'}</div></div></div>`).join('')}</div>` : ''}
+    ${flags.length ? `<div class="card" style="border-right:4px solid var(--red)"><div class="card-header"><span class="card-title">🚩 דגלים אדומים</span></div><ul style="font-size:13px;padding-right:16px;line-height:1.8">${flags.map(f => `<li style="color:var(--red)">${f}</li>`).join('')}</ul></div>` : ''}
+    ${op.internalNote && op.internalNote !== '...' ? `<div class="card" style="background:var(--surface2)"><div class="card-header"><span class="card-title">📋 הערה פנימית</span></div><div style="font-size:13px;color:var(--text2)">${op.internalNote}</div></div>` : ''}`;
+    }
 
-// ── Appendix ──
-function renderAppendix(r){
-  const ap=r.appendix||{};
-  document.getElementById('appendix-content').innerHTML=`
-    <div class="card"><div class="card-header"><span class="card-title">יומן עיבוד</span></div><div style="font-size:12px;font-family:monospace;background:var(--surface2);padding:12px;border-radius:var(--radius);line-height:1.8">${safe(ap.processingLog).map(l=>`<div>▸ ${l}</div>`).join('')||'<div style="color:var(--text3)">אין יומן</div>'}</div></div>
-    <div class="card"><div class="card-header"><span class="card-title">מקורות לא נגישים (fail-closed)</span></div>${(ap.unavailableSources||['מידע תכנוני — לא נגיש','GovMap — לא נגיש','XPlan — לא נגיש']).map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span class="badge badge-red">לא נגיש</span><span style="font-size:13px">${s}</span></div>`).join('')}</div>
-    ${safe(ap.ocrWarnings).length?`<div class="card"><div class="card-header"><span class="card-title">אזהרות OCR</span></div>${safe(ap.ocrWarnings).map(w=>`<div class="badge badge-amber" style="margin-bottom:4px;display:block">${w}</div>`).join('')}</div>`:''}
-    ${safe(ap.assumptions).length?`<div class="card"><div class="card-header"><span class="card-title">הנחות ניתוח</span></div><ul style="font-size:13px;padding-right:16px;line-height:1.8">${safe(ap.assumptions).map(a=>`<li>${a}</li>`).join('')}</ul></div>`:''}
-    ${ap.internalNotes&&ap.internalNotes!=='...'?`<div class="card"><div class="card-header"><span class="card-title">הערות פנימיות נוספות</span></div><div style="font-size:13px;color:var(--text2)">${ap.internalNotes}</div></div>`:''}`;
-}
+    // ── Appendix ──
+    function renderAppendix(r) {
+      const ap = r.appendix || {};
+      document.getElementById('appendix-content').innerHTML = `
+    <div class="card"><div class="card-header"><span class="card-title">יומן עיבוד</span></div><div style="font-size:12px;font-family:monospace;background:var(--surface2);padding:12px;border-radius:var(--radius);line-height:1.8">${safe(ap.processingLog).map(l => `<div>▸ ${l}</div>`).join('') || '<div style="color:var(--text3)">אין יומן</div>'}</div></div>
+    <div class="card"><div class="card-header"><span class="card-title">מקורות לא נגישים (fail-closed)</span></div>${(ap.unavailableSources || ['מידע תכנוני — לא נגיש', 'GovMap — לא נגיש', 'XPlan — לא נגיש']).map(s => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span class="badge badge-red">לא נגיש</span><span style="font-size:13px">${s}</span></div>`).join('')}</div>
+    ${safe(ap.ocrWarnings).length ? `<div class="card"><div class="card-header"><span class="card-title">אזהרות OCR</span></div>${safe(ap.ocrWarnings).map(w => `<div class="badge badge-amber" style="margin-bottom:4px;display:block">${w}</div>`).join('')}</div>` : ''}
+    ${safe(ap.assumptions).length ? `<div class="card"><div class="card-header"><span class="card-title">הנחות ניתוח</span></div><ul style="font-size:13px;padding-right:16px;line-height:1.8">${safe(ap.assumptions).map(a => `<li>${a}</li>`).join('')}</ul></div>` : ''}
+    ${ap.internalNotes && ap.internalNotes !== '...' ? `<div class="card"><div class="card-header"><span class="card-title">הערות פנימיות נוספות</span></div><div style="font-size:13px;color:var(--text2)">${ap.internalNotes}</div></div>` : ''}`;
+    }
 
-// ─────────────────────────────────────────────
-//  RESET
-// ─────────────────────────────────────────────
-function resetAll(){
-  if(!confirm('לאפס את כל הנתונים ולפתוח תיק חדש?')) return;
-  state.files=[]; state.metadata={}; state.analysisResult=null;
-  renderFileList();
-  ['f-case','f-yishuv','f-vaada','f-gush','f-helka','f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['f-req-type','f-bldg-type'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('topbar-case').textContent='אין תיק פעיל';
-  document.getElementById('topbar-dot').className='dot dot-gray';
-  SECTIONS.forEach(s=>{
-    const c=document.getElementById(s+'-content')||document.getElementById(s==='threshold'?'thresh-content':s+'-content');
-    if(c) c.innerHTML='<div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>';
-  });
-  showSection('intake');
-}
+    // ─────────────────────────────────────────────
+    //  RESET
+    // ─────────────────────────────────────────────
+    function resetAll() {
+      if (!confirm('לאפס את כל הנתונים ולפתוח תיק חדש?')) return;
+      state.files = []; state.metadata = {}; state.analysisResult = null;
+      renderFileList();
+      ['f-case', 'f-yishuv', 'f-vaada', 'f-gush', 'f-helka', 'f-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['f-req-type', 'f-bldg-type'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('topbar-case').textContent = 'אין תיק פעיל';
+      document.getElementById('topbar-dot').className = 'dot dot-gray';
+      SECTIONS.forEach(s => {
+        const c = document.getElementById(s + '-content') || document.getElementById(s === 'threshold' ? 'thresh-content' : s + '-content');
+        if (c) c.innerHTML = '<div class="alert alert-info"><span class="alert-icon">ℹ</span>טרם הורץ ניתוח.</div>';
+      });
+      showSection('intake');
+    }
 
-// Init
-showSection('intake');
-</script>
+    // Init
+    showSection('intake');
+  </script>
 </body>
+
 </html>
