@@ -757,9 +757,15 @@ def render_appendix(r):
 # ─────────────────────────────────────────────────────────────────────────────
 #  SESSION STATE
 # ─────────────────────────────────────────────────────────────────────────────
+def _load_api_key() -> str:
+    try:
+        return st.secrets["GOOGLE_API_KEY"]
+    except Exception:
+        return os.environ.get("GOOGLE_API_KEY", "")
+
 for _k, _v in {
     "result": None,
-    "api_key": os.environ.get("GOOGLE_API_KEY", ""),
+    "api_key": _load_api_key(),
 }.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -772,23 +778,10 @@ with st.sidebar:
     st.caption("מערכת ניתוח תכנוני — משרד החקלאות וביטחון המזון")
     st.divider()
 
-    with st.expander("🔑 מפתח API", expanded=not bool(st.session_state.api_key)):
-        new_key = st.text_input(
-            "Google Gemini API Key",
-            value=st.session_state.api_key,
-            type="password",
-            placeholder="AIza...",
-            label_visibility="collapsed",
-            key="api_key_input",
-        )
-        if new_key != st.session_state.api_key:
-            st.session_state.api_key = new_key
-            st.rerun()
-        if st.session_state.api_key:
-            st.success("✓ מפתח מוכן")
-        else:
-            st.warning("נדרש מפתח API")
-        st.caption("המפתח נשמר בסשן בלבד ואינו נשלח לשום שרת מלבד generativelanguage.googleapis.com")
+    if st.session_state.api_key:
+        st.success("✓ מחובר ל-Google Gemini")
+    else:
+        st.error("⚠ מפתח GOOGLE_API_KEY חסר — פנה למנהל המערכת")
 
     st.divider()
     if st.button("🔄 תיק חדש", use_container_width=True):
@@ -861,7 +854,6 @@ with st.expander("📂 קליטת תיק — מטא-דאטה ומסמכים",
         "▶ הרץ ניתוח מלא",
         type="primary",
         use_container_width=True,
-        disabled=not bool(st.session_state.api_key),
         key="btn_analyze",
     )
 
